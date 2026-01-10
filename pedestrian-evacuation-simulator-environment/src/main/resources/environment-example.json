@@ -1,0 +1,87 @@
+{
+  "gateways": [
+    {
+      "id": 0,
+      "domain1": 1,
+      "domain2": 0
+    }
+  ],
+  "domains": [
+    {
+      "id": 1,
+      "width": 200.0,
+      "height": 100.0,
+      "obstacles": [
+        {
+          "shape": {
+            "type": "CIRCLE",
+            "center": {
+              "x": 15.0,
+              "y": 20.0
+            },
+            "radius": 9.5
+          },
+          "name": "column",
+          "description": "a column"
+        },
+        {
+          "shape": {
+            "type": "RECTANGLE",
+            "bottomLeft": {
+              "x": 30.0,
+              "y": 40.0
+            },
+            "width": 10.0,
+            "height": 10.0
+          },
+          "name": "rectangle",
+          "description": "a rectangle"
+        },
+        {
+          "shape": {
+            "type": "POLYGON",
+            "points": [
+              {
+                "x": 150.0,
+                "y": 50.0
+              },
+              {
+                "x": 180.0,
+                "y": 70.0
+              },
+              {
+                "x": 120.0,
+                "y": 90.0
+              }
+            ]
+          }
+        }
+      ],
+      "accesses": [
+        {
+          "shape": {
+            "type": "CIRCLE",
+            "center": {
+              "x": 50.0,
+              "y": 20.0
+            },
+            "radius": 5.0
+          },
+          "id": 0
+        },
+        {
+          "shape": {
+            "type": "RECTANGLE",
+            "bottomLeft": {
+              "x": 190.0,
+              "y": 0.0
+            },
+            "width": 10.0,
+            "height": 5.0
+          },
+          "id": 0
+        }
+      ]
+    }
+  ]
+}

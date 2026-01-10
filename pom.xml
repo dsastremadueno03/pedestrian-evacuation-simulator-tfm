@@ -1,0 +1,20 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.tusuperproyecto</groupId>
+    <artifactId>agregador-simulacion</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging> <modules>
+        <module>derivative-free-optimization</module>
+        <module>ea</module>
+        <module>json-simple</module>
+        <module>memetic-continuous</module>
+        <module>pedestrian-evacuation-optimization</module>
+        <module>pedestrian-evacuation-simulator-cellular-automaton</module>
+        <module>pedestrian-evacuation-simulator-cellular-automaton-trace</module>
+        <module>pedestrian-evacuation-simulator-environment</module>
+        <module>statistics</module>
+    </modules>
+</project>
