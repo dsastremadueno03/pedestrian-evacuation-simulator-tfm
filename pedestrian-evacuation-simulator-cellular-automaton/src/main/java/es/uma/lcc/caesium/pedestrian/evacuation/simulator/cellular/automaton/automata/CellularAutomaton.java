@@ -137,6 +137,31 @@ public class CellularAutomaton {
       return false;
     }
   }
+  
+  /**
+   * Adds an already created pedestrian to this automaton.
+   * Use for adding specific types (civilian, police, attacker).
+   * 
+   * @param pedestrian The pedestrian object to add.
+   * @return True if pedestrian can be added.
+   */
+  public boolean addPedestrian(Pedestrian pedestrian) {
+      int row = pedestrian.getRow();
+      int column = pedestrian.getColumn();
+      
+      if(row < 0 || row >= getRows() || column < 0 || column >= getColumns()) {
+    	  return false;
+      }
+      
+      if(isCellReachable(row, column)) {
+    	  occupied[row][column] = true;
+    	  inScenarioPedestrians.add(pedestrian);
+    	  return true;
+    	  } 
+      else {
+    	return false;
+    }
+  }
 
   /**
    * Adds a new pedestrian to this automaton.
