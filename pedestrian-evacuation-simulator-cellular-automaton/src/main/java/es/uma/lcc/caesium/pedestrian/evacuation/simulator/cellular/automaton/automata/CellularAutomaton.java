@@ -116,6 +116,10 @@ public class CellularAutomaton {
   public int getColumns() {
     return scenario.getColumns();
   }
+  
+  public PedestrianFactory getPedestrianFactory() {
+	  return this.pedestrianFactory;
+  }
 
   /**
    * Adds a new pedestrian to this automaton.
