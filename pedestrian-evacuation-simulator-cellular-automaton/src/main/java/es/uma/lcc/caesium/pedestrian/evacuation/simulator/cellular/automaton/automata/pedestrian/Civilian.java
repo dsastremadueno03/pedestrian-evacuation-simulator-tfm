@@ -19,7 +19,23 @@ public class Civilian extends Pedestrian {
 	
 	@Override
 	public void paint(Canvas canvas, Color fillColor, Color outlineColor) {
-		super.paint(canvas, Color.GREEN, outlineColor);
+		switch (ageGroup) {
+		case CHILD: {
+			super.paint(canvas, Color.LIGHT_GRAY, outlineColor);
+			break;
+		}
+		case ADULT: {
+			super.paint(canvas, Color.GRAY, outlineColor);
+			break;
+		}
+		case ELDERLY: {
+			super.paint(canvas, Color.DARK_GRAY, outlineColor);
+			break;
+		}
+		default:
+			throw new IllegalArgumentException("Unexpected value: " + ageGroup);
+		}
+		
 	}
 	
 	@Override
