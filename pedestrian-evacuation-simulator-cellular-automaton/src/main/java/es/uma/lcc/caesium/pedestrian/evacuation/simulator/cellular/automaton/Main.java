@@ -5,12 +5,16 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.Statistics;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PopulationConfig;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PopulationGenerator;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Supplier;
 
 import static es.uma.lcc.caesium.statistics.Random.random;
@@ -37,17 +41,40 @@ class Main {
 
     var automaton = new CellularAutomaton(cellularAutomatonParameters);
 
-    // place pedestrians
-    Supplier<PedestrianParameters> pedestrianParametersSupplier = () ->
+    // Place pedestrians
+    
+    PopulationConfig populationConfig = new PopulationConfig(
+    		20, // numCivilians
+    		1, //numAttackers
+    		1, // numPolice
+    		0.1, // probChild
+    		0.7, // probAdult
+    		0.2 // probElderly
+    		);
+    
+    var pedestrianParametersSupplier =
         new PedestrianParameters.Builder()
             .fieldAttractionBias(random.nextDouble(1.0, 10.0 ))
             .crowdRepulsion(random.nextDouble(0.1, 0.5))
             .velocityPercent(random.nextDouble(0.3, 1.0))
             .build();
 
-    var numberOfPedestrians = random.nextInt(150, 600);
-    automaton.addPedestriansUniformly(numberOfPedestrians, pedestrianParametersSupplier);
-
+    var generator = new PopulationGenerator(automaton.getPedestrianFactory(), automaton);
+    
+    List<Pedestrian> crowd = generator.generatePopulation(populationConfig, pedestrianParametersSupplier);
+    
+    int addedCount = 0;
+    for(Pedestrian p : crowd) {
+    	if(automaton.addPedestrian(p)) {
+    		addedCount++;
+    	} else {
+    		System.out.println("Aviso: No se ha podido colocar " + p);
+    	}
+    }
+    System.out.println("Simulación iniciada con " + addedCount + " personas.");
+    
+    // ------------------
+    
     automaton.runGUI(); // automaton.run() to run without GUI
     Statistics statistics = automaton.computeStatistics();
     System.out.println(statistics);
