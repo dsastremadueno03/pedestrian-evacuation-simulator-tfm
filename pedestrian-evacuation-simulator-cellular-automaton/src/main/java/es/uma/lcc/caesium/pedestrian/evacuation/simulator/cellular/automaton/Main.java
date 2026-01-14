@@ -44,7 +44,7 @@ class Main {
     // Place pedestrians
     
     PopulationConfig populationConfig = new PopulationConfig(
-    		20, // numCivilians
+    		50, // numCivilians
     		1, //numAttackers
     		1, // numPolice
     		0.1, // probChild

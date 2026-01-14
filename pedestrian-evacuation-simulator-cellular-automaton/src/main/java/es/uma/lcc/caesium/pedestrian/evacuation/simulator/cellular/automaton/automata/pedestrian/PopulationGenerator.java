@@ -5,17 +5,15 @@ import java.util.List;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
-import es.uma.lcc.caesium.statistics.Random;
+import static es.uma.lcc.caesium.statistics.Random.random;
 
 public class PopulationGenerator {
 	private final PedestrianFactory factory;
 	private final CellularAutomaton automaton;
-	private Random random;
 	
 	public PopulationGenerator(PedestrianFactory factory, CellularAutomaton automaton) {
 		this.factory = factory;
 		this.automaton = automaton;
-		random = new Random();
 	}
 	
 	// Para crear la población deseada según parámetros
@@ -26,7 +24,23 @@ public class PopulationGenerator {
 		for(int i = 0; i < config.numCivilians(); i++) {
 			Location loc = getRandomEmptyLocation();
 			Age age = determineAge(config);
-			pedestrians.add(factory.getCivilian(loc.row(), loc.column(), defaultParams, age));
+			
+			double finalSpeed = defaultParams.velocityPercent();
+			
+			// Ajustar velocidad a la edad
+			if(age == Age.CHILD)
+				finalSpeed = Math.min(1.0, 1.5 * finalSpeed);
+			else if (age == Age.ELDERLY)
+				finalSpeed = finalSpeed * 0.5;
+			
+			// Se reconstruyen los parámetros
+			PedestrianParameters finalParams = new PedestrianParameters.Builder()
+					.fieldAttractionBias(defaultParams.fieldAttractionBias())
+					.crowdRepulsion(defaultParams.crowdRepulsion())
+					.velocityPercent(finalSpeed)
+					.build();
+			
+			pedestrians.add(factory.getCivilian(loc.row(), loc.column(), finalParams, age));
 		}
 		
 		// Atacantes
