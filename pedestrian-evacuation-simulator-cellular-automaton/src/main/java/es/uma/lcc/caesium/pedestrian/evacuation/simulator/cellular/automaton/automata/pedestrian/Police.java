@@ -9,7 +9,7 @@ public class Police extends Pedestrian {
 	private final int attackRange;
 	
 	public Police(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, int attackRange){
-		super(row, column, parameters, automaton);
+		super(row, column, parameters, automaton, Math.max(attackRange, DEFAULT_VISION));
 		this.attackRange = attackRange;
 	}
 

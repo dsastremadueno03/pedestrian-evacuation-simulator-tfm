@@ -9,7 +9,7 @@ public class Civilian extends Pedestrian {
 	private final Age ageGroup;
 	
 	public Civilian(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, Age ageGroup){
-		super(row, column, parameters, automaton);
+		super(row, column, parameters, automaton, DEFAULT_VISION);
 		this.ageGroup = ageGroup;
 	}
 	

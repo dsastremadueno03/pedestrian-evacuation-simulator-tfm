@@ -18,6 +18,10 @@ import static es.uma.lcc.caesium.statistics.Random.random;
  * @author Pepe Gallardo
  */
 public class Pedestrian {
+	
+	// TODO: Utilizar parámetros
+	public static final int DEFAULT_VISION = 7;
+	
   /**
    * Class counter to generate unique identifiers for pedestrians.
    */
@@ -54,6 +58,8 @@ public class Pedestrian {
    * Path followed by pedestrian in scenario during simulation.
    */
   protected final List<Location> path;
+  
+  protected int visionRadius;
 
   /**
    * A tentative movement consists of a location (where we should move) and a desirability (the higher the
@@ -85,6 +91,7 @@ public class Pedestrian {
    * @param column     column in scenario where pedestrian will be located.
    * @param parameters parameters describing new pedestrian.
    * @param automaton  automaton where this pedestrian evolves.
+   
    */
   public Pedestrian(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton) {
     this.identifier = nextIdentifier++;
@@ -95,6 +102,28 @@ public class Pedestrian {
     this.numberOfSteps = 0;
     this.path = new ArrayList<>();
     this.path.add(new Location(row, column));
+    this.visionRadius = DEFAULT_VISION;
+  }
+  
+  /**
+   * Constructs a new pedestrian.
+   *
+   * @param row        row in scenario where pedestrian will be located.
+   * @param column     column in scenario where pedestrian will be located.
+   * @param parameters parameters describing new pedestrian.
+   * @param automaton  automaton where this pedestrian evolves.
+   * @param visionRadius range of vision for this pedestrian.
+   */
+  public Pedestrian(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, int visionRadius) {
+    this.identifier = nextIdentifier++;
+    this.row = row;
+    this.column = column;
+    this.parameters = parameters;
+    this.automaton = automaton;
+    this.numberOfSteps = 0;
+    this.path = new ArrayList<>();
+    this.path.add(new Location(row, column));
+    this.visionRadius = visionRadius;
   }
 
   /**
@@ -196,6 +225,79 @@ public class Pedestrian {
    */
   public int getExitTimeSteps() {
     return exitTimeSteps;
+  }
+  
+  public int getVisionRadius() {
+	  return visionRadius;
+  }
+  
+  /**
+   * Calculates cells in range of vision.
+   * 
+   * @return Cells visible
+   */
+  public List<Location> computeVisibleCells(){
+	  List<Location> visibleCells = new ArrayList<Location>();
+	  int rows = automaton.getRows();
+	  int cols = automaton.getColumns();
+	  
+	  // Campo de visión según distancia Manhattan
+	  for(int r = row - visionRadius; r <= row + visionRadius; r++) {
+		  for(int c = column - visionRadius; c <= column + visionRadius; c++) {
+			  if(r >= 0 && r < rows && c >= 0 && c < cols) {
+				  int distance = Math.abs(row-r) + Math.abs(column-c);
+				  if(distance <= visionRadius) {
+					  // Comprobar obstáculos
+					  if(hasLineOfSight(row, column, r, c)) {
+						  visibleCells.add(new Location(r, c));
+					  }
+				  }
+			  }
+		  }
+	  }
+	  return visibleCells;
+  }
+  
+  private boolean hasLineOfSight(int r0, int c0, int r1, int c1) {
+	  if(r0 == r1 && c0 == c1)
+		  return true; // Es la misma casilla, por lo tanto siempre es visible
+	  
+	  // Empleo del Algoritmo de Bresenham
+	  // Deltas (distancia total a recorrer)
+	  int dr = Math.abs(r1 - r0);
+	  int dc = Math.abs(c1 - c0);
+	  // Signo de la dirección
+	  int sr = -1;
+	  int sc = -1;
+	  if(r0 > r1)
+		  sr = 1;
+	  if(c0 > c1)
+		  sc = 1;
+	  // Error para detectar desvío en la diagonal
+	  int error = dr - dc;
+	  
+	  int currentRow = r0;
+	  int currentCol = c0;
+	  
+	  while(true) {
+		  if(currentRow == r1 && currentCol == c1)
+			  return true;
+		  if((currentRow != r0 || currentCol != c0) && automaton.getScenario().isBlocked(currentRow, currentCol))
+			  return false;
+		  
+		  // Actualización del error para corregir la trayectoria
+		  int e2 = 2 * error;
+		  if(e2 > -dc) {
+			  error -= dc;
+			  currentRow += sr;
+		  }
+		  
+		  if(e2 < dr) {
+			  error += dr;
+			  currentCol += sc;
+		  }
+	  }
+	  
   }
 
 

@@ -11,7 +11,7 @@ public class Attacker extends Pedestrian {
 	private final int aggressiveness;
 	
 	public Attacker(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, int attackRange, int aggressiveness){
-		super(row, column, parameters, automaton);
+		super(row, column, parameters, automaton, Math.max(attackRange, DEFAULT_VISION));
 		this.attackRange = attackRange;
 		this.aggressiveness = aggressiveness;
 	}
