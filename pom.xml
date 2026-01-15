@@ -8,6 +8,14 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+  <dependencies>
+      <dependency>
+          <groupId>es.uma.lcc.caesium</groupId>
+          <artifactId>pedestrian-evacuation-optimization</artifactId>
+          <version>0.0.1-SNAPSHOT</version>
+      </dependency>
+  </dependencies>
+
   <build>
     <plugins>
       <plugin>
