@@ -25,6 +25,10 @@ public class Attacker extends Pedestrian {
 		return aggressiveness;
 	}
 	
+	public boolean isMelee() {
+		return attackRange <= 1;
+	}
+	
 	@Override
 	public void paint(Canvas canvas, Color fillColor, Color outlineColor) {
 		super.paint(canvas, Color.RED, outlineColor);
