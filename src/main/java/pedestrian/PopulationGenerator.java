@@ -3,19 +3,18 @@ package pedestrian;
 import java.util.ArrayList;
 import java.util.List;
 
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
+import automaton.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianFactory;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.statistics.Random;
 
 public class PopulationGenerator {
-	private final PedestrianFactory factory;
-	private final CellularAutomaton automaton;
+	private final MultiPedestrianFactory factory;
+	private final SpecificCellularAutomaton automaton;
 	private Random random;
 	
-	public PopulationGenerator(PedestrianFactory factory, CellularAutomaton automaton) {
+	public PopulationGenerator(MultiPedestrianFactory factory, SpecificCellularAutomaton automaton) {
 		this.factory = factory;
 		this.automaton = automaton;
 		random = new Random();
@@ -29,21 +28,21 @@ public class PopulationGenerator {
 		for(int i = 0; i < config.numCivilians(); i++) {
 			Location loc = getRandomEmptyLocation();
 			Age age = determineAge(config);
-			pedestrians.add(((MultiPedestrianFactory)factory).getCivilian(loc.row(), loc.column(), defaultParams, age));
+			pedestrians.add(factory.getCivilian(loc.row(), loc.column(), defaultParams, age));
 		}
 		
 		// Atacantes
 		// TODO: Ajustar parámetros de campo de visión y agresividad
 		for(int i = 0; i < config.numAttackers(); i++) {
 			Location loc = getRandomEmptyLocation();
-			pedestrians.add(((MultiPedestrianFactory)factory).getAttacker(loc.row(), loc.column(), defaultParams, 5, 80));
+			pedestrians.add(factory.getAttacker(loc.row(), loc.column(), defaultParams, 5, 80));
 		}
 		
 		// Policía
 		// TODO: Ajustar parámetros de campo de visión
 		for(int i = 0; i < config.numPolice(); i++) {
 			Location loc = getRandomEmptyLocation();
-			pedestrians.add(((MultiPedestrianFactory)factory).getPolice(loc.row(), loc.column(), defaultParams, 3));
+			pedestrians.add(factory.getPolice(loc.row(), loc.column(), defaultParams, 3));
 		}
 		
 		return pedestrians;

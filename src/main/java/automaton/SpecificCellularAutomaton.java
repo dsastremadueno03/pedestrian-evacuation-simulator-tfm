@@ -3,12 +3,15 @@ package automaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianFactory;
+import pedestrian.MultiPedestrianFactory;
 
 public class SpecificCellularAutomaton extends CellularAutomaton {
 	
+	private final MultiPedestrianFactory myFactory;
+	
 	public SpecificCellularAutomaton(CellularAutomatonParameters parameters) {
 		super(parameters);
+		this.myFactory = new MultiPedestrianFactory(this);
 	}
 	
 	public boolean addPedestrian(Pedestrian pedestrian) {
@@ -28,8 +31,8 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		return false;
 	}
 	
-	public PedestrianFactory getPedestrianFactory() {
-		return this.pedestrianFactory;
+	public MultiPedestrianFactory getPedestrianFactory() {
+		return myFactory;
 	}
 
 }

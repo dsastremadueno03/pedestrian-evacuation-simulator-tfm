@@ -2,6 +2,7 @@ package run;
 
 import static es.uma.lcc.caesium.statistics.Random.random;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
@@ -77,6 +78,12 @@ class Main {
     // write trace to json file
     var trace = automaton.getTrace();
     String fileName = "data/traces/trace.json";
+    
+    File file = new File(fileName);
+    if (file.getParentFile() != null) {
+    	file.getParentFile().mkdirs();
+    }
+    
     try (FileWriter fileWriter = new FileWriter(fileName)) {
       fileWriter.write(Jsoner.prettyPrint(trace.toJson().toJson()));
       fileWriter.flush();
