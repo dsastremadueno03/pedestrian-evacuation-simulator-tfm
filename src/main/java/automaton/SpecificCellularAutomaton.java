@@ -126,7 +126,12 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 							visibilityMatrix[r0][c0][r1][c1] = true;
 						} 
 						else{
-							visibilityMatrix[r0][c0][r1][c1] = checkLineOfSightWithObstacles(r0, c0, r1, c1);
+							// It is simmetrical
+							if(r1 > r0 || (r1 == r0 && c1 > c0)){
+								boolean visible = checkLineOfSightWithObstacles(r0, c0, r1, c1);
+								visibilityMatrix[r0][c0][r1][c1] = visible;
+								visibilityMatrix[r1][c1][r0][c0] = visible;
+							}
 						}
 					}
 				}
