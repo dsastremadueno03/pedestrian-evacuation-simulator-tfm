@@ -3,6 +3,7 @@ package pedestrian;
 import java.util.ArrayList;
 import java.util.List;
 
+import automaton.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
@@ -40,14 +41,14 @@ public class PedestrianWithVision extends Pedestrian {
 		  int rows = automaton.getRows();
 		  int cols = automaton.getColumns();
 		  
-		  // Vision range following Manhattan distance
+		  // Vision range following Euclidean distance
 		  for(int r = row - visionRadius; r <= row + visionRadius; r++) {
 			  for(int c = column - visionRadius; c <= column + visionRadius; c++) {
 				  if(r >= 0 && r < rows && c >= 0 && c < cols) {
-					  int distance = Math.abs(row-r) + Math.abs(column-c);
-					  if(distance <= visionRadius) {
+					  double distance = Math.pow(row - r, 2) + Math.pow(column - c, 2);
+					  if(distance <= visionRadius * visionRadius) { // Distance smaller than square radius
 						  // Check obstacles
-						  if(hasLineOfSight(row, column, r, c)) {
+						  if(hasSight(row, column, r, c)) {
 							  visibleCells.add(new Location(r, c));
 						  }
 					  }
@@ -59,7 +60,28 @@ public class PedestrianWithVision extends Pedestrian {
 	  }
 	  
 	  /**
-	   * Checks if in line of sight (dynamic checking)
+	   * Checks if it is visible from the static map
+	   * 
+	   * @param r0 initial row
+	   * @param c0 initial column
+	   * @param r1 final row
+	   * @param c1 final column
+	   * @return true if (r1,c1) is visible from (r0,c0) in the static map
+	   */
+	  protected boolean hasStaticSight(int r0, int c0, int r1, int c1) {
+		  if(this.automaton instanceof SpecificCellularAutomaton) {
+			  SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
+			  
+			  if(!myAutomaton.isVisible(new Location(r0, c0), new Location(r1, c1))) {
+				  return false;
+			  }
+		  }
+		  
+		  return true;
+	  }
+	  
+	  /**
+	   * Checks if in line of sight (dynamic checking for changes in scenario)
 	   * 
 	   * @param r0 initial row
 	   * @param c0 initial column
@@ -67,22 +89,22 @@ public class PedestrianWithVision extends Pedestrian {
 	   * @param c1 final column
 	   * @return true if in line of sight
 	   */
-	  private boolean hasLineOfSight(int r0, int c0, int r1, int c1) {
+	  protected boolean hasDynamicSight(int r0, int c0, int r1, int c1) {
 		  if(r0 == r1 && c0 == c1)
-			  return true; // Es la misma casilla, por lo tanto siempre es visible
+			  return true; // Same cell, always visible
 		  
-		  // Empleo del Algoritmo de Bresenham
-		  // Deltas (distancia total a recorrer)
+		  // Bresenham Algorithm
+		  // Distance to cover
 		  int dr = Math.abs(r1 - r0);
 		  int dc = Math.abs(c1 - c0);
-		  // Signo de la dirección
-		  int sr = -1;
-		  int sc = -1;
+		  // Direction
+		  int sr = 1;
+		  int sc = 1;
 		  if(r0 > r1)
-			  sr = 1;
+			  sr = -1;
 		  if(c0 > c1)
-			  sc = 1;
-		  // Error para detectar desvío en la diagonal
+			  sc = -1;
+		  // Error trajectory calculation
 		  int error = dr - dc;
 		  
 		  int currentRow = r0;
@@ -91,10 +113,10 @@ public class PedestrianWithVision extends Pedestrian {
 		  while(true) {
 			  if(currentRow == r1 && currentCol == c1)
 				  return true;
-			  if((currentRow != r0 || currentCol != c0) && automaton.getScenario().isBlocked(currentRow, currentCol))
+			  if((currentRow != r0 || currentCol != c0) && (automaton.isCellOccupied(currentRow, currentCol)))
 				  return false;
 			  
-			  // Actualización del error para corregir la trayectoria
+			  // Fix trajectory
 			  int e2 = 2 * error;
 			  if(e2 > -dc) {
 				  error -= dc;
@@ -107,6 +129,11 @@ public class PedestrianWithVision extends Pedestrian {
 			  }
 		  }
 		  
+	  }
+	  
+	  protected boolean hasSight(int r0, int c0, int r1, int c1) {
+		  return hasStaticSight(r0, c0, r1, c1) 
+				  && hasDynamicSight(r0, c0, r1, c1);
 	  }
 
 }
