@@ -3,6 +3,7 @@ package automaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianFactory;
 
 public class SpecificCellularAutomaton extends CellularAutomaton {
 	
@@ -25,6 +26,10 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		}
 		
 		return false;
+	}
+	
+	public PedestrianFactory getPedestrianFactory() {
+		return this.pedestrianFactory;
 	}
 
 }
