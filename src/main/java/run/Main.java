@@ -64,10 +64,16 @@ class Main {
     	if(automaton.addPedestrian(p)) {
     		addedCount++;
     	} else {
-    		System.out.println("Aviso: No se ha podido colocar " + p);
+    		System.out.println("Warning: could not place " + p);
     	}
     }
-    System.out.println("Simulación iniciada con " + addedCount + " personas.");
+    System.out.println("Simulation initiated with " + addedCount + " people.");
+    
+    // ------------------
+    
+    // Calculate visibility map
+    
+    automaton.calculateVisibilityMap();
     
     // ------------------
     

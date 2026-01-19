@@ -131,7 +131,7 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 					}
 				}
 			}
-			System.out.println("Calculating map, please wait... " + (Math.round((r0/(rows * 1.0)) * 100)));
+			System.out.println("Calculating map, please wait... (" + (Math.round((r0/(rows * 1.0)) * 100)) + "%)");
 		}
 		visibilityCalculated = true;
 		long end = System.currentTimeMillis();
