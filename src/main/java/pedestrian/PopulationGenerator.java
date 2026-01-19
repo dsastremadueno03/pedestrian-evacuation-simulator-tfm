@@ -18,24 +18,29 @@ public class PopulationGenerator {
 		this.automaton = automaton;
 	}
 	
-	// Para crear la población deseada según parámetros
+	/**
+	 * Generates population following parameters passed
+	 * @param config parameters for general population distribution
+	 * @param defaultParams parameters for individual pedestrian
+	 * @return list of population
+	 */
 		public List<Pedestrian> generatePopulation(PopulationConfig config, PedestrianParameters defaultParams){
 			List<Pedestrian> pedestrians = new ArrayList<Pedestrian>();
 			
-			// Civiles
+			// Civilians
 			for(int i = 0; i < config.numCivilians(); i++) {
 				Location loc = getRandomEmptyLocation();
 				Age age = determineAge(config);
 				
 				double finalSpeed = defaultParams.velocityPercent();
 				
-				// Ajustar velocidad a la edad
+				// Adjust speed to age
 				if(age == Age.CHILD)
 					finalSpeed = Math.min(1.0, 1.5 * finalSpeed);
 				else if (age == Age.ELDERLY)
 					finalSpeed = finalSpeed * 0.5;
 				
-				// Se reconstruyen los parámetros
+				// Rebuilding parameters
 				PedestrianParameters finalParams = new PedestrianParameters.Builder()
 						.fieldAttractionBias(defaultParams.fieldAttractionBias())
 						.crowdRepulsion(defaultParams.crowdRepulsion())
@@ -45,14 +50,14 @@ public class PopulationGenerator {
 				pedestrians.add(factory.getCivilian(loc.row(), loc.column(), finalParams, age));
 			}
 			
-			// Atacantes
+			// Attackers
 			// TODO: Ajustar parámetros de campo de visión y agresividad
 			for(int i = 0; i < config.numAttackers(); i++) {
 				Location loc = getRandomEmptyLocation();
 				pedestrians.add(factory.getAttacker(loc.row(), loc.column(), defaultParams, 5, 80));
 			}
 			
-			// Policía
+			// Police
 			// TODO: Ajustar parámetros de campo de visión
 			for(int i = 0; i < config.numPolice(); i++) {
 				Location loc = getRandomEmptyLocation();

@@ -1,18 +1,17 @@
 package pedestrian;
 
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import java.awt.Color;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Canvas;
 
-public class Attacker extends Pedestrian {
+public class Attacker extends PedestrianWithVision {
 	private final int attackRange;
 	// aggressiveness = 0% - 100% 
 	private final int aggressiveness;
 	
 	public Attacker(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, int attackRange, int aggressiveness){
-		super(row, column, parameters, automaton);
+		super(row, column, parameters, automaton, Math.max(attackRange, DEFAULT_VISION));
 		this.attackRange = attackRange;
 		this.aggressiveness = aggressiveness;
 	}
