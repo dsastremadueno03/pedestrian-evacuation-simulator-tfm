@@ -24,15 +24,15 @@ public class Civilian extends Pedestrian {
 		public void paint(Canvas canvas, Color fillColor, Color outlineColor) {
 			switch (ageGroup) {
 			case CHILD: {
-				super.paint(canvas, Color.LIGHT_GRAY, outlineColor);
+				super.paint(canvas, Color.YELLOW, outlineColor);
 				break;
 			}
 			case ADULT: {
-				super.paint(canvas, Color.GRAY, outlineColor);
+				super.paint(canvas, Color.GREEN, outlineColor);
 				break;
 			}
 			case ELDERLY: {
-				super.paint(canvas, Color.DARK_GRAY, outlineColor);
+				super.paint(canvas, Color.MAGENTA, outlineColor);
 				break;
 			}
 			default:
