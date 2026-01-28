@@ -68,7 +68,7 @@ public class PedestrianWithVision extends Pedestrian {
 	   * @param c1 final column
 	   * @return true if (r1,c1) is visible from (r0,c0) in the static map
 	   */
-	  protected boolean hasStaticSight(int r0, int c0, int r1, int c1) {
+	  public boolean hasStaticSight(int r0, int c0, int r1, int c1) {
 		  if(this.automaton instanceof SpecificCellularAutomaton) {
 			  SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
 			  
@@ -89,7 +89,7 @@ public class PedestrianWithVision extends Pedestrian {
 	   * @param c1 final column
 	   * @return true if in line of sight
 	   */
-	  protected boolean hasDynamicSight(int r0, int c0, int r1, int c1) {
+	  public boolean hasDynamicSight(int r0, int c0, int r1, int c1) {
 		  if(r0 == r1 && c0 == c1)
 			  return true; // Same cell, always visible
 		  
@@ -131,7 +131,16 @@ public class PedestrianWithVision extends Pedestrian {
 		  
 	  }
 	  
-	  protected boolean hasSight(int r0, int c0, int r1, int c1) {
+	  /**
+	   * Checks both static and dynamic visibility
+	   * 
+	   * @param r0 initial row
+	   * @param c0 initial column
+	   * @param r1 final row
+	   * @param c1 final column
+	   * @return true if visible
+	   */
+	  public boolean hasSight(int r0, int c0, int r1, int c1) {
 		  return hasStaticSight(r0, c0, r1, c1) 
 				  && hasDynamicSight(r0, c0, r1, c1);
 	  }
