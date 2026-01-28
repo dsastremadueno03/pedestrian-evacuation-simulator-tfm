@@ -1,10 +1,14 @@
 package automaton;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import pedestrian.MultiPedestrianFactory;
+import signs.Sign;
 
 public class SpecificCellularAutomaton extends CellularAutomaton {
 	
@@ -13,6 +17,8 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 	// Matrix variables for static map
 	private boolean[][][][] visibilityMatrix;
 	private boolean visibilityCalculated = false;
+	
+	private List<Sign> signs = new ArrayList<>(); 
 	
 	public SpecificCellularAutomaton(CellularAutomatonParameters parameters) {
 		super(parameters);
@@ -52,6 +58,14 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		}
 		
 		return visibilityMatrix[loc1.row()][loc1.column()][loc2.row()][loc2.column()];
+	}
+	
+	public void addSign(Sign sign) {
+		this.signs.add(sign);
+	}
+	
+	public List<Sign> getSigns(){
+		return this.signs;
 	}
 	
 	/**
