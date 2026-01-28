@@ -23,14 +23,14 @@ public abstract class Sign {
 	 * Defines how a sign can be detected
 	 * @return true if detected
 	 */
-	public abstract boolean isDetectedBy();
+	public abstract boolean isDetectedBy(PedestrianWithVision p);
 	
 	/**
-	 * Calculates euclidean distance from sign to pedestrian
+	 * Calculates squared distance from sign to pedestrian
 	 * @param p pedestrian to calculate distance to
-	 * @return euclidean distance
+	 * @return squared distance
 	 */
-	protected double calculateEuclideanDistance(PedestrianWithVision p) {
+	protected double calculateSquaredDistance(PedestrianWithVision p) {
 		return Math.pow(location.row() - p.getRow(), 2) + Math.pow(location.column() - p.getColumn(), 2);
 		
 	}
