@@ -9,8 +9,8 @@ import java.util.List;
 
 import com.github.cliftonlabs.json_simple.Jsoner;
 
-import automaton.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.Statistics;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
@@ -19,6 +19,7 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import pedestrian.PopulationConfig;
 import pedestrian.PopulationGenerator;
+import signs.VisualSign;
 
 class Main {
   public static void main(String[] args) {
@@ -36,6 +37,12 @@ class Main {
             .build();
 
     var automaton = new SpecificCellularAutomaton(cellularAutomatonParameters);
+    
+    // Place signs
+    
+    VisualSign sign = new VisualSign(3,3);
+    automaton.addSign(sign);
+    
 
     // Place pedestrians
     

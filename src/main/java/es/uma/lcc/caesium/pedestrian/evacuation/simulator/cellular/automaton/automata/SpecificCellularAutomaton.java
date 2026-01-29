@@ -1,12 +1,13 @@
-package automaton;
+package es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Canvas;
 import pedestrian.MultiPedestrianFactory;
 import signs.Sign;
 
@@ -155,6 +156,27 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		visibilityCalculated = true;
 		long end = System.currentTimeMillis();
 		System.out.println("Map calculated in " + (end-start) + "ms.");
+		
+	}
+	
+	@Override
+	void paint(Canvas canvas) {
+		super.paint(canvas);
+		
+		Graphics2D g = canvas.graphics2D();
+		Color originalColor = g.getColor();
+		g.setColor(Color.CYAN);
+		
+		for(Sign sign : signs) {
+			Location loc = sign.getLocation();
+			
+			g.fillRect(loc.column(), loc.row(), 1, 1);
+			g.setColor(Color.BLACK);
+			g.drawRect(loc.column(), loc.row(), 1, 1);
+			g.setColor(Color.CYAN);
+		}
+		
+		g.setColor(originalColor);
 		
 	}
 	
