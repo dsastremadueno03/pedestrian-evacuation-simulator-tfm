@@ -12,19 +12,31 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geo
 public class PedestrianWithVision extends Pedestrian {
 	
 	
-	//TODO: Incluir parámetro variable
-	public static final int DEFAULT_VISION = 7;
+	//TODO: Incluir parámetro variable en METROS
+	public static final double DEFAULT_VISION = 7.0;
 	
 	protected int visionRadius;
 	
 	public PedestrianWithVision(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton) {
 		super(row, column, parameters, automaton);
-		this.visionRadius = DEFAULT_VISION;
+		this.visionRadius = calculateVisionRadiusInCells(DEFAULT_VISION);
 	}
 	
-	public PedestrianWithVision(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, int visionRadius) {
+	public PedestrianWithVision(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, double visionRadius) {
 		super(row, column, parameters, automaton);
-		this.visionRadius = visionRadius;
+		this.visionRadius = calculateVisionRadiusInCells(visionRadius);
+	}
+	
+	/**
+	 *
+	 * Converts meters to cells using dimension defined in scenario.
+	 * 
+	 * @param meters to be converted to cells
+	 * @return number of cells equivalent
+	 */
+	private int calculateVisionRadiusInCells(double meters) {
+		double cellDim = automaton.getScenario().getCellDimension();
+		return (int) Math.ceil(meters / cellDim);
 	}
 	
 	public int getVisionRadius() {
