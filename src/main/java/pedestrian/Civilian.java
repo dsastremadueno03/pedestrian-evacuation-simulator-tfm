@@ -143,6 +143,9 @@ public class Civilian extends PedestrianWithVision {
 		
 		@Override
 		public void paint(Canvas canvas, Color fillColor, Color outlineColor) {
+			if(knowsExit) {
+				outlineColor = Color.WHITE;
+			}
 			switch (ageGroup) {
 			case CHILD: {
 				super.paint(canvas, Color.YELLOW, outlineColor);
