@@ -15,7 +15,8 @@ public class PedestrianWithVision extends Pedestrian {
 	//TODO: Incluir parámetro variable en METROS
 	public static final double DEFAULT_VISION = 7.0;
 	
-	protected int visionRadius;
+	// Converted cell approximation
+	protected double visionRadius;
 	
 	public PedestrianWithVision(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton) {
 		super(row, column, parameters, automaton);
@@ -34,12 +35,12 @@ public class PedestrianWithVision extends Pedestrian {
 	 * @param meters to be converted to cells
 	 * @return number of cells equivalent
 	 */
-	private int calculateVisionRadiusInCells(double meters) {
+	private double calculateVisionRadiusInCells(double meters) {
 		double cellDim = automaton.getScenario().getCellDimension();
-		return (int) Math.ceil(meters / cellDim);
+		return meters / cellDim;
 	}
 	
-	public int getVisionRadius() {
+	public double getVisionRadius() {
 		return visionRadius;
 	}
 	
@@ -53,9 +54,11 @@ public class PedestrianWithVision extends Pedestrian {
 		  int rows = automaton.getRows();
 		  int cols = automaton.getColumns();
 		  
+		  int searchLimit = (int) Math.ceil(visionRadius);
+		  
 		  // Vision range following Euclidean distance
-		  for(int r = row - visionRadius; r <= row + visionRadius; r++) {
-			  for(int c = column - visionRadius; c <= column + visionRadius; c++) {
+		  for(int r = row - searchLimit; r <= row + searchLimit; r++) {
+			  for(int c = column - searchLimit; c <= column + searchLimit; c++) {
 				  if(r >= 0 && r < rows && c >= 0 && c < cols) {
 					  double distance = Math.pow(row - r, 2) + Math.pow(column - c, 2);
 					  if(distance <= visionRadius * visionRadius) { // Distance smaller than square radius
