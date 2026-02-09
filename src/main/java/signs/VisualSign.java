@@ -16,7 +16,7 @@ public class VisualSign extends Sign {
 	@Override
 	public boolean isDetectedBy(PedestrianWithVision p) {
 		double visionRadius = p.getVisionRadius();
-		if(calculateSquaredDistance(p) > visionRadius * visionRadius) { // Better for efficiency rather than using squared root
+		if(calculateDistance(p) > visionRadius) { // Better for efficiency rather than using squared root
 			return false;
 		}
 		// Only checks static for walls (pedestrians do not affect vision)

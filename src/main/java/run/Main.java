@@ -82,6 +82,10 @@ class Main {
     
     automaton.calculateVisibilityMap();
     
+    // Calculate distance map
+    
+    automaton.calculateDistanceMap();
+    
     // ------------------
     
     automaton.runGUI(); // automaton.run() to run without GUI

@@ -19,6 +19,10 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 	private boolean[][][][] visibilityMatrix;
 	private boolean visibilityCalculated = false;
 	
+	// Matrix for distance map
+	private double[][] distanceMatrix;
+	private boolean distanceCalculated = false;
+	
 	private List<Sign> signs = new ArrayList<>(); 
 	
 	public SpecificCellularAutomaton(CellularAutomatonParameters parameters) {
@@ -122,6 +126,8 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 	
 	/**
 	 * TO BE CALLED IN MAIN
+	 * 
+	 * Calculates static visibility map
 	 */
 	public void calculateVisibilityMap() {
 		int rows = getRows();
@@ -151,12 +157,69 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 					}
 				}
 			}
-			System.out.println("Calculating map, please wait... (" + (Math.round((r0/(rows * 1.0)) * 100)) + "%)");
+			System.out.println("Calculating visibility map, please wait... (" + (Math.round((r0/(rows * 1.0)) * 100)) + "%)");
 		}
 		visibilityCalculated = true;
 		long end = System.currentTimeMillis();
-		System.out.println("Map calculated in " + (end-start) + "ms.");
+		System.out.println("Visibility map calculated in " + (end-start) + "ms.");
 		
+	}
+	
+	/**
+	 * TO BE USED IN MAIN
+	 * 
+	 * Calculate distances between two cells in advance
+	 */
+	public void calculateDistanceMap() {
+		int rows = getRows();
+		int cols = getColumns();
+		
+		System.out.println("Calculating static distance map...");
+		
+		long start = System.currentTimeMillis();
+		
+		distanceMatrix = new double[rows][cols];
+		
+		for(int dr = 0; dr < rows; dr++){
+			for(int dc = 0; dc < cols; dc++){
+				distanceMatrix[dr][dc] = Math.sqrt(dr * dr + dc * dc);
+			}
+		}
+		
+		distanceCalculated = true;
+		long end = System.currentTimeMillis();
+		System.out.println("Distance map calculated in " + (end-start) + "ms.");
+		
+	}
+	
+	/**
+	 * Calculates distance distance by looking in the matrix
+	 * 
+	 * @param r0 initial row
+	 * @param c0 initial column
+	 * @param r1 final row
+	 * @param c1 final column
+	 * @return euclidean distance for offset
+	 */
+	public double getDistance(int r0, int c0, int r1, int c1) {
+		if(!distanceCalculated) { // Should not run this snippet
+			return Math.sqrt((r1 - r0) * (r1 - r0) + (c1 - c0) * (c1 - c0));
+		}
+		
+		int dr = Math.abs(r0 - r1);
+		int dc = Math.abs(c0 - c1);
+		return distanceMatrix[dr][dc];
+	}
+	
+	/**
+	 * Calculates distance distance by looking in the matrix
+	 * 
+	 * @param l1 initial position
+	 * @param l2 final position
+	 * @return euclidean distance for offset
+	 */
+	public double getDistance(Location l1, Location l2) {
+		return getDistance(l1.row(), l1.column(), l2.row(), l2.column());
 	}
 	
 	@Override

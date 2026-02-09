@@ -159,7 +159,34 @@ public class PedestrianWithVision extends Pedestrian {
 		  return hasStaticSight(r0, c0, r1, c1) 
 				  && hasDynamicSight(r0, c0, r1, c1);
 	  }
+	  
+	  /**
+	   * Calculates distance distance by looking in the matrix
+	   * 
+	   * @param r0 initial row
+	   * @param c0 initial column
+	   * @param r1 final row
+	   * @param c1 final column
+	   * @return euclidean distance for offset
+	   */
+	  public double getDistance(int r0, int c0, int r1, int c1) {
+		  if(this.automaton instanceof SpecificCellularAutomaton) {
+			  SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
+			  return myAutomaton.getDistance(r0, c0, r1, c1);
+		  }
+		  return Math.sqrt((r1 - r0) * (r1 - r0) + (c1 - c0) * (c1 - c0));
+	  }
 
+	  /**
+		 * Calculates distance distance by looking in the matrix
+		 * 
+		 * @param l1 initial position
+		 * @param l2 final position
+		 * @return euclidean distance for offset
+		 */
+		public double getDistance(Location l1, Location l2) {
+			return this.getDistance(l1.row(), l1.column(), l2.row(), l2.column());
+		}
 }
 
 	

@@ -26,13 +26,12 @@ public abstract class Sign {
 	public abstract boolean isDetectedBy(PedestrianWithVision p);
 	
 	/**
-	 * Calculates squared distance from sign to pedestrian
+	 * Calculates distance from sign to pedestrian
 	 * @param p pedestrian to calculate distance to
-	 * @return squared distance
+	 * @return distance
 	 */
-	protected double calculateSquaredDistance(PedestrianWithVision p) {
-		return Math.pow(location.row() - p.getRow(), 2) + Math.pow(location.column() - p.getColumn(), 2);
-		
+	protected double calculateDistance(PedestrianWithVision p) {
+		return p.getDistance(this.location.row(), this.location.column(), p.getRow(), p.getColumn());
 	}
 	
 }
