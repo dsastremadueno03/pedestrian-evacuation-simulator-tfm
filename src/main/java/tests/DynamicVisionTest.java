@@ -13,6 +13,7 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
+import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.PedestrianWithVision;
 
 class DynamicVisionTest {
@@ -24,6 +25,7 @@ class DynamicVisionTest {
 
 	@BeforeEach
 	void setUp() {
+		Random.random.setSeed(4);
 		var scenarioBuilder = new Scenario.Builder()
 				.rows(ROWS)
 				.columns(COLS)
