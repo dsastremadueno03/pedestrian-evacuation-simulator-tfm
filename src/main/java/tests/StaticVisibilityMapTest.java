@@ -50,6 +50,7 @@ class StaticVisibilityMapTest {
 	void GenerationMapTest() {
 		initAutomaton(scenario);
 		automaton.calculateVisibilityMap();
+		automaton.calculateDistanceMap();
 		
 		for(int r0 = 0; r0 < ROWS; r0++){
 			for(int c0 = 0; c0 < COLS; c0++) {
@@ -76,6 +77,7 @@ class StaticVisibilityMapTest {
 		
 		initAutomaton(scenario);
 		automaton.calculateVisibilityMap();
+		automaton.calculateDistanceMap();
 		
 		// X | *X*
 		Location left = new Location(5,4);

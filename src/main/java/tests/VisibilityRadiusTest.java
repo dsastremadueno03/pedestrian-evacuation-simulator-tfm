@@ -42,6 +42,7 @@ class VisibilityRadiusTest {
 		automaton = new SpecificCellularAutomaton(params);
 		
 		automaton.calculateVisibilityMap();
+		automaton.calculateDistanceMap();
 		
 		defaultParams = new PedestrianParameters.Builder().build();
 	}

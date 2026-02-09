@@ -44,6 +44,7 @@ class SignTest {
 		VisualSign sign = new VisualSign(20, 20);
 		automaton.addSign(sign);
 		automaton.calculateVisibilityMap();
+		automaton.calculateDistanceMap();
 		
 		PedestrianParameters pParams = new PedestrianParameters.Builder()
 				.velocityPercent(1.0)
