@@ -1,7 +1,6 @@
 package run;
 
 import static es.uma.lcc.caesium.statistics.Random.random;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -15,11 +14,14 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
 import pedestrian.PopulationConfig;
 import pedestrian.PopulationGenerator;
 import signs.EphimeralVisualSign;
+import signs.EvacuationPlanSign;
 
 class Main {
   public static void main(String[] args) {
@@ -37,6 +39,10 @@ class Main {
             .build();
 
     var automaton = new SpecificCellularAutomaton(cellularAutomatonParameters);
+    
+    // Generate signs on exits
+    
+    GenerateSignOnExits(scenario, automaton);
     
     // Place signs
     
@@ -107,6 +113,24 @@ class Main {
       System.out.printf("Trace written to file %s successfully.%n", fileName);
     } catch (IOException e) {
       e.printStackTrace();
+    }
+  }
+
+  /**
+   * Creates a permanent sign on the center of the exit rectangle, 
+   * so that pedestrians are attracted.
+   * 
+   * @param scenario scenario built
+   * @param automaton automaton used
+   */
+  public static void GenerateSignOnExits(Scenario scenario, SpecificCellularAutomaton automaton) {
+	System.out.println("Generating permanent signs on exits...");
+    for(Rectangle exit : scenario.exits()) {
+    	int centerRow = exit.bottom() + (exit.height() / 2);
+    	int centerCol = exit.left() + (exit.width() / 2);
+    	EvacuationPlanSign exitSign = new EvacuationPlanSign(centerRow, centerCol);
+    	automaton.addSign(exitSign);
+    	System.out.println("Exit Sign generated at (" + centerRow + ", " + centerCol + ").");
     }
   }
 }

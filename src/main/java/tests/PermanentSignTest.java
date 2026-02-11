@@ -11,7 +11,6 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geo
 import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Age;
 import pedestrian.Civilian;
-import signs.EphimeralVisualSign;
 import signs.EvacuationPlanSign;
 
 class PermanentSignTest {
@@ -38,6 +37,14 @@ class PermanentSignTest {
 				.build();
 		
 		automaton = new SpecificCellularAutomaton(params);
+		System.out.println("Generating permanent signs on exits...");
+	    for(Rectangle exit : scenario.exits()) {
+	    	int centerRow = exit.bottom() + (exit.height() / 2);
+	    	int centerCol = exit.left() + (exit.width() / 2);
+	    	EvacuationPlanSign exitSign = new EvacuationPlanSign(centerRow, centerCol);
+	    	automaton.addSign(exitSign);
+	    	System.out.println("Exit Sign generated at (" + centerRow + ", " + centerCol + ").");
+	    }
 	}
 
 	@Test

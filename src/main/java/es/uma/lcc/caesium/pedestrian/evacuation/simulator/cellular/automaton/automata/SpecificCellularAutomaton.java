@@ -9,6 +9,8 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Canvas;
 import pedestrian.MultiPedestrianFactory;
+import signs.EphimeralVisualSign;
+import signs.EvacuationPlanSign;
 import signs.Sign;
 
 public class SpecificCellularAutomaton extends CellularAutomaton {
@@ -228,15 +230,19 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		
 		Graphics2D g = canvas.graphics2D();
 		Color originalColor = g.getColor();
-		g.setColor(Color.CYAN);
 		
 		for(Sign sign : signs) {
 			Location loc = sign.getLocation();
 			
+			if(sign instanceof EphimeralVisualSign) {
+				g.setColor(Color.CYAN);
+			} else if(sign instanceof EvacuationPlanSign) {
+				g.setColor(Color.YELLOW);
+			}
+			
 			g.fillRect(loc.column(), loc.row(), 1, 1);
 			g.setColor(Color.BLACK);
 			g.drawRect(loc.column(), loc.row(), 1, 1);
-			g.setColor(Color.CYAN);
 		}
 		
 		g.setColor(originalColor);
