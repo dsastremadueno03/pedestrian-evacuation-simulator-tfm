@@ -18,7 +18,9 @@ public class Civilian extends PedestrianWithVision {
 
 	private final Age ageGroup;
 	
-	private boolean knowsExit; // Access to desirability static map 
+	private boolean permanentExitKnown; // Knows exit map always
+	
+	private boolean temporalExitKnown; // Knows exit map right now
 	
 	/**
 	 * Minimum desirability of a cell so that it is never 0.
@@ -28,30 +30,33 @@ public class Civilian extends PedestrianWithVision {
 		public Civilian(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, Age ageGroup){
 			super(row, column, parameters, automaton);
 			this.ageGroup = ageGroup;
-			knowsExit = false;
+			permanentExitKnown = false;
+			temporalExitKnown = false;
 		}
 		
 		public Age getAge() {
 			return ageGroup;
 		}
 		
+		public void setPermanentExitKnown(boolean b) {
+			permanentExitKnown = b;
+		}
+		
+		public void setTemporalExitKnown(boolean b) {
+			temporalExitKnown = b;
+		}
+		
 		/**
 		 * Detects signals in the surroundings
 		 */
 		protected void updateDetection() {
-			if(knowsExit) {
-				return;
-			}
+			temporalExitKnown = false; // Always update
 			
 			if(automaton instanceof SpecificCellularAutomaton) {
-				SpecificCellularAutomaton newAutomaton = (SpecificCellularAutomaton) automaton;
-				List<Sign> signs = newAutomaton.getSigns();
+				SpecificCellularAutomaton myNewAutomaton = (SpecificCellularAutomaton) automaton;
 				
-				for(Sign sign : signs) {
-					if(sign.isDetectedBy(this)) {
-						knowsExit = true;
-						break;
-					}
+				for(Sign sign : myNewAutomaton.getSigns()) {
+					sign.applyEffect(this);
 				}
 			}
 			
@@ -108,7 +113,7 @@ public class Civilian extends PedestrianWithVision {
 			
 			// Changes according to whether civilian has seen sign
 			double currentAttraction;
-			if(knowsExit) {
+			if(temporalExitKnown || permanentExitKnown) {
 				currentAttraction = parameters.fieldAttractionBias();
 			} else {
 				currentAttraction = 0;
@@ -143,7 +148,7 @@ public class Civilian extends PedestrianWithVision {
 		
 		@Override
 		public void paint(Canvas canvas, Color fillColor, Color outlineColor) {
-			if(knowsExit) {
+			if(permanentExitKnown || temporalExitKnown) {
 				outlineColor = Color.WHITE;
 			}
 			switch (ageGroup) {

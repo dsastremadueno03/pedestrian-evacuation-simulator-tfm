@@ -19,7 +19,7 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import pedestrian.PopulationConfig;
 import pedestrian.PopulationGenerator;
-import signs.VisualSign;
+import signs.EphimeralVisualSign;
 
 class Main {
   public static void main(String[] args) {
@@ -40,7 +40,7 @@ class Main {
     
     // Place signs
     
-    VisualSign sign = new VisualSign(3,3);
+    EphimeralVisualSign sign = new EphimeralVisualSign(3,3);
     automaton.addSign(sign);
     
 

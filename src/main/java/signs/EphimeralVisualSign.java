@@ -1,15 +1,16 @@
 package signs;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
+import pedestrian.Civilian;
 import pedestrian.PedestrianWithVision;
 
-public class VisualSign extends Sign {
+public class EphimeralVisualSign extends Sign {
 
-	public VisualSign(Location location) {
+	public EphimeralVisualSign(Location location) {
 		super(location);
 	}
 	
-	public VisualSign(int row, int col) {
+	public EphimeralVisualSign(int row, int col) {
 		super(row, col);
 	}
 	
@@ -21,6 +22,12 @@ public class VisualSign extends Sign {
 		}
 		// Only checks static for walls (pedestrians do not affect vision)
 		return p.hasStaticSight(p.getRow(), p.getColumn(), super.getLocation().row(), super.getLocation().column());
+	}
+	
+	@Override
+	protected void executeBehavior(Civilian c) {
+		c.setTemporalExitKnown(true);
+		
 	}
 
 }

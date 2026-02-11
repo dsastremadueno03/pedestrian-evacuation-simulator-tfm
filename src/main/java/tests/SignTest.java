@@ -11,7 +11,7 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geo
 import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Age;
 import pedestrian.Civilian;
-import signs.VisualSign;
+import signs.EphimeralVisualSign;
 
 class SignTest {
 	
@@ -41,7 +41,7 @@ class SignTest {
 
 	@Test
 	void test() {
-		VisualSign sign = new VisualSign(20, 20);
+		EphimeralVisualSign sign = new EphimeralVisualSign(20, 20);
 		automaton.addSign(sign);
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
