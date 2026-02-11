@@ -12,8 +12,9 @@ import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Age;
 import pedestrian.Civilian;
 import signs.EphimeralVisualSign;
+import signs.EvacuationPlanSign;
 
-class SignTest {
+class PermanentSignTest {
 	
 	double cellSize;
 	Scenario scenario;
@@ -41,7 +42,7 @@ class SignTest {
 
 	@Test
 	void test() {
-		EphimeralVisualSign sign = new EphimeralVisualSign(20, 20);
+		EvacuationPlanSign sign = new EvacuationPlanSign(20, 20);
 		automaton.addSign(sign);
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
