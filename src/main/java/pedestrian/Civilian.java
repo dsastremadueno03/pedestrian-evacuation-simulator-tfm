@@ -123,9 +123,20 @@ public class Civilian extends PedestrianWithVision {
 				if (automaton.isCellReachable(neighbour)) {
 					// count reachable cells around new location
 					var numberOfReachableCellsAround = 0;
+					// Get neighbors around the target
+					var targetNeighbors = automaton.neighbours(neighbour.row(), neighbour.column());
+					
 					for (var around : automaton.neighbours(neighbour)) {
 						if (automaton.isCellReachable(around)) {
 							numberOfReachableCellsAround++;
+						}
+					}
+					
+					// Get how many people there are
+					double peopleAround = 0;
+					for(var around : targetNeighbors) {
+						if(automaton.isCellReachable(around)) {
+							peopleAround++;
 						}
 					}
 
@@ -133,7 +144,13 @@ public class Civilian extends PedestrianWithVision {
 							* scenario.getStaticFloorField().getField(neighbour);
 					// If crowdRepulsion is negative, tend to stick to other pedestrians and walls
 					var repulsion = parameters.crowdRepulsion() / (1 + numberOfReachableCellsAround);
-					var desirability = Math.exp(attraction - repulsion);
+					
+					// Herd behavior
+					double herdWeight = 0.5; // + -> Attraction | - -> Repulsion
+					var socialAttraction = herdWeight * peopleAround;
+					
+					
+					var desirability = Math.exp(attraction + socialAttraction - repulsion);
 					movements.add(new CivilianMovement(neighbour, desirability));
 					if (desirability < minDesirability)
 						minDesirability = desirability;
