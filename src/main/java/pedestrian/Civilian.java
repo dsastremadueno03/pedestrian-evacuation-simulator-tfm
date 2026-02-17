@@ -131,6 +131,7 @@ public class Civilian extends PedestrianWithVision {
 
 					var attraction = currentAttraction
 							* scenario.getStaticFloorField().getField(neighbour);
+					// If crowdRepulsion is negative, tend to stick to other pedestrians and walls
 					var repulsion = parameters.crowdRepulsion() / (1 + numberOfReachableCellsAround);
 					var desirability = Math.exp(attraction - repulsion);
 					movements.add(new CivilianMovement(neighbour, desirability));
