@@ -224,6 +224,29 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		return getDistance(l1.row(), l1.column(), l2.row(), l2.column());
 	}
 	
+	/**
+	 * Obtains the pedestrian's data at a certain location
+	 * 
+	 * @param row coordinate row
+	 * @param col coordinate column
+	 * @return pedestrian instance at row, column
+	 */
+	public Pedestrian getPedestrianAt(int row, int col) {
+		if(!isCellOccupied(row, col)) {
+			return null;
+		}
+		
+		// Synchronized as parent class does for security reasons
+		synchronized(inScenarioPedestrians) {
+			for(Pedestrian p : inScenarioPedestrians) {
+				if(p.getRow() == row && p.getColumn() == col) {
+					return p;
+				}
+			}
+		}
+		return null;
+	}
+	
 	@Override
 	void paint(Canvas canvas) {
 		super.paint(canvas);

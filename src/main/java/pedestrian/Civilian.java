@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Canvas;
@@ -105,12 +106,13 @@ public class Civilian extends PedestrianWithVision {
 		 *         with associate desirability.
 		 */
 		private List<CivilianMovement> computeCustomDesirabilities() {
+			SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
 			var scenario = automaton.getScenario();
 			var neighbours = automaton.neighbours(row, column);
 
 			var movements = new ArrayList<CivilianMovement>(neighbours.size());
 			double minDesirability = Double.MAX_VALUE;
-			
+
 			// Changes according to whether civilian has seen sign
 			double currentAttraction;
 			if(temporalExitKnown || permanentExitKnown) {
@@ -118,39 +120,64 @@ public class Civilian extends PedestrianWithVision {
 			} else {
 				currentAttraction = 0;
 			}
+
+			
+			// SOCIAL FIELD - PHASE 1 - FINDING NEIGHBORS
+			List<PedestrianWithVision> visiblePeople = new ArrayList<PedestrianWithVision>();
+			for(Location loc : computeVisibleCells()) { // Limits to field of vision
+				Pedestrian person = myAutomaton.getPedestrianAt(loc.row(), loc.column());
+				// Add to list of visible pedestrians if it's PedestrianWithVision 
+				// and it's not itself
+				if(person instanceof PedestrianWithVision && person != this) {
+					visiblePeople.add((PedestrianWithVision) person);
+				}
+			}
+			
 			
 			for (var neighbour : neighbours) {
-				if (automaton.isCellReachable(neighbour)) {
+				if (myAutomaton.isCellReachable(neighbour)) {
 					// count reachable cells around new location
 					var numberOfReachableCellsAround = 0;
-					// Get neighbors around the target
-					var targetNeighbors = automaton.neighbours(neighbour.row(), neighbour.column());
-					
-					for (var around : automaton.neighbours(neighbour)) {
-						if (automaton.isCellReachable(around)) {
+					for (var around : myAutomaton.neighbours(neighbour)) {
+						if (myAutomaton.isCellReachable(around)) {
 							numberOfReachableCellsAround++;
-						}
-					}
-					
-					// Get how many people there are
-					double peopleAround = 0;
-					for(var around : targetNeighbors) {
-						if(automaton.isCellReachable(around)) {
-							peopleAround++;
 						}
 					}
 
 					var attraction = currentAttraction
 							* scenario.getStaticFloorField().getField(neighbour);
-					// If crowdRepulsion is negative, tend to stick to other pedestrians and walls
 					var repulsion = parameters.crowdRepulsion() / (1 + numberOfReachableCellsAround);
 					
-					// Herd behavior
-					double herdWeight = 0.5; // + -> Attraction | - -> Repulsion
-					var socialAttraction = herdWeight * peopleAround;
+					
+					// SOCIAL FIELD - PHASE 2 - CALCULATE CS (SOCIAL FIELD)
+					double socialField = 0;
+					
+					// Differentiation between Pedestrian types
+					for(PedestrianWithVision p : visiblePeople) {
+						double weight = 0;
+						
+						// Civilian
+						if(p instanceof Civilian) {
+							weight = 0.5;
+						}
+						// Police
+						else if(p instanceof Police) {
+							weight = 2.0;
+						}
+						// Attacker
+						else if(p instanceof Attacker) {
+							weight = -5.0;
+						}
+						
+						double dist = getDistance(neighbour.row(), neighbour.column(), p.getRow(), p.getColumn());
+						dist = Math.max(0.1, dist); // Prevent from 0 division
+						
+						socialField += weight * (1 / dist);
+						
+					}
 					
 					
-					var desirability = Math.exp(attraction + socialAttraction - repulsion);
+					var desirability = Math.exp(attraction + socialField - repulsion);
 					movements.add(new CivilianMovement(neighbour, desirability));
 					if (desirability < minDesirability)
 						minDesirability = desirability;
