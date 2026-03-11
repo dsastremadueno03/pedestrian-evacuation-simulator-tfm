@@ -120,6 +120,21 @@ public class Civilian extends PedestrianWithVision {
 			} else {
 				currentAttraction = 0;
 			}
+			
+			// Calculate inertia vector for movement desirability
+			double inertiaWeight = 0.1; // TODO: Parametro a importar en JSON
+			int inertiaRow = 0;
+			int inertiaCol = 0;
+			
+			// Get path history of civilian
+			List<Location> path = this.getPath();
+			if(path != null && path.size() >= 2) {
+				// Get previous location of civilian
+				Location prevLoc = path.get(path.size()-2);
+				inertiaRow = this.row - prevLoc.row();
+				inertiaCol = this.column - prevLoc.column();
+			}
+			
 
 			
 			// SOCIAL FIELD - PHASE 1 - FINDING NEIGHBORS
@@ -154,15 +169,15 @@ public class Civilian extends PedestrianWithVision {
 					
 					// Differentiation between Pedestrian types
 					for(PedestrianWithVision p : visiblePeople) {
-						double weight = 0;
+						double weight = 0; // TODO: Parametros en matriz por json
 						
 						// Civilian
 						if(p instanceof Civilian) {
-							weight = 0.5;
+							weight = 0.1;
 						}
 						// Police
 						else if(p instanceof Police) {
-							weight = 2.0;
+							weight = 0.5;
 						}
 						// Attacker
 						else if(p instanceof Attacker) {
@@ -176,8 +191,20 @@ public class Civilian extends PedestrianWithVision {
 						
 					}
 					
+					// Calculate Intertia desirability
+					double inertiaDesirability = 0;
+					if(inertiaRow != 0 || inertiaCol != 0) {
+						int moveRow = neighbour.row() - this.row;
+						int moveCol = neighbour.column() - this.column;
+						// Dot product between inertia and proposed neighbor
+						// + -> Same direction
+						// - -> Different direction
+						double joining = (inertiaRow * moveRow) + (inertiaCol * moveCol);
+						inertiaDesirability = inertiaWeight * joining; 
+					}
 					
-					var desirability = Math.exp(attraction + socialField - repulsion);
+					
+					var desirability = Math.exp(attraction + socialField + inertiaDesirability - repulsion);
 					movements.add(new CivilianMovement(neighbour, desirability));
 					if (desirability < minDesirability)
 						minDesirability = desirability;
