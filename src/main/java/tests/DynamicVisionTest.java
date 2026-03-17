@@ -10,16 +10,16 @@ import org.junit.jupiter.api.Test;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.PedestrianWithVision;
+import pedestrian.PedestrianWithVisionParameters;
 
 class DynamicVisionTest {
 	
 	private SpecificCellularAutomaton automaton;
-	private PedestrianParameters defaultParams;
+	private PedestrianWithVisionParameters defaultParams;
 	private final int ROWS = 10;
 	private final int COLS = 10;
 
@@ -43,15 +43,15 @@ class DynamicVisionTest {
 		
 		automaton.calculateVisibilityMap();
 		
-		defaultParams = new PedestrianParameters.Builder().build();
+		defaultParams = new PedestrianWithVisionParameters.Builder().visionRadius(5).build();
 	}
 	
 	@Test
 	void testPedestrianBlocksVisionVerticalHorizontal() {
-		PedestrianWithVision observer = new PedestrianWithVision(5, 1, defaultParams, automaton, 5);
+		PedestrianWithVision observer = new PedestrianWithVision(5, 1, defaultParams, automaton);
 		automaton.addPedestrian(observer);
 		
-		PedestrianWithVision blocker = new PedestrianWithVision(5, 3, defaultParams, automaton, 5);
+		PedestrianWithVision blocker = new PedestrianWithVision(5, 3, defaultParams, automaton);
 		boolean placed = automaton.addPedestrian(blocker);
 		
 		assertTrue(placed, "Blocker should be placed in (5,3)!");
@@ -80,10 +80,10 @@ class DynamicVisionTest {
 	
 	@Test
 	void testPedestrianBlocksVisionDiagonal() {
-		PedestrianWithVision observer = new PedestrianWithVision(0, 0, defaultParams, automaton, 5);
+		PedestrianWithVision observer = new PedestrianWithVision(0, 0, defaultParams, automaton);
 		automaton.addPedestrian(observer);
 		
-		PedestrianWithVision blocker = new PedestrianWithVision(2, 2, defaultParams, automaton, 5);
+		PedestrianWithVision blocker = new PedestrianWithVision(2, 2, defaultParams, automaton);
 		boolean placed = automaton.addPedestrian(blocker);
 		
 		assertTrue(placed, "Blocker should be placed in (2,2)!");

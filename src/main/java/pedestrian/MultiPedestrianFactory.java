@@ -2,7 +2,6 @@ package pedestrian;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianFactory;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 
 public class MultiPedestrianFactory extends PedestrianFactory {
 	
@@ -15,20 +14,20 @@ public class MultiPedestrianFactory extends PedestrianFactory {
 
 	// Generación de diferentes tipos de Pedestrian
 
-	public Civilian getCivilian(int row, int column, PedestrianParameters parameters, Age ageGroup) {
+	public Civilian getCivilian(int row, int column, PedestrianWithVisionParameters parameters, Age ageGroup) {
 		  validateCoordinates(row, column);
 		  return new Civilian(row, column, parameters, automaton, ageGroup);
 	  }
 
-	public Attacker getAttacker(int row, int column, PedestrianParameters parameters, int attackRange,
+	public Attacker getAttacker(int row, int column, PedestrianWithVisionParameters parameters, int attackRange,
 			int aggressiveness) {
 		validateCoordinates(row, column);
-		return new Attacker(row, column, parameters, automaton, attackRange, aggressiveness);
+		return new Attacker(row, column, parameters, automaton);
 	}
 
-	public Police getPolice(int row, int column, PedestrianParameters parameters, int attackRange) {
+	public Police getPolice(int row, int column, PedestrianWithVisionParameters parameters, int attackRange) {
 		validateCoordinates(row, column);
-		return new Police(row, column, parameters, automaton, attackRange);
+		return new Police(row, column, parameters, automaton);
 	}
 
 	// --------------

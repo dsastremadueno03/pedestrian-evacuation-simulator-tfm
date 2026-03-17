@@ -12,7 +12,6 @@ import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Age;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
-import signs.EvacuationPlanSign;
 
 public class PedestriansBehaviorTest {
 
@@ -25,12 +24,12 @@ public class PedestriansBehaviorTest {
 	void start() {
 		Random.random.setSeed(4);
 		scenario = new Scenario.Builder()
-				.rows(10)
-				.columns(40)
+				.rows(50)
+				.columns(50)
 				.cellDimension(1.0)
 				.build();
 		
-		scenario.setExit(new Rectangle(0, 40, 10, 0));
+		scenario.setExit(new Rectangle(0, 50, 10, 0));
 		
 		params = new CellularAutomatonParameters.Builder()
 				.scenario(scenario)

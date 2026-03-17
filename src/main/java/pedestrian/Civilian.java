@@ -10,7 +10,6 @@ import java.util.Optional;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Canvas;
 import signs.Sign;
@@ -22,13 +21,8 @@ public class Civilian extends PedestrianWithVision {
 	private boolean permanentExitKnown; // Knows exit map always
 	
 	private boolean temporalExitKnown; // Knows exit map right now
-	
-	/**
-	 * Minimum desirability of a cell so that it is never 0.
-	 */
-	private static final double DESIRABILITY_EPSILON = 0.00001;
 
-		public Civilian(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, Age ageGroup){
+		public Civilian(int row, int column, PedestrianWithVisionParameters parameters, CellularAutomaton automaton, Age ageGroup){
 			super(row, column, parameters, automaton);
 			this.ageGroup = ageGroup;
 			permanentExitKnown = false;
@@ -122,7 +116,7 @@ public class Civilian extends PedestrianWithVision {
 			}
 			
 			// Calculate inertia vector for movement desirability
-			double inertiaWeight = 0.1; // TODO: Parametro a importar en JSON
+			double inertiaWeight = super.customParameters.inertiaWeight();
 			int inertiaRow = 0;
 			int inertiaCol = 0;
 			
@@ -169,19 +163,19 @@ public class Civilian extends PedestrianWithVision {
 					
 					// Differentiation between Pedestrian types
 					for(PedestrianWithVision p : visiblePeople) {
-						double weight = 0; // TODO: Parametros en matriz por json
+						double weight = 0;
 						
 						// Civilian
 						if(p instanceof Civilian) {
-							weight = 0.1;
+							weight = super.customParameters.civilianWeight();
 						}
 						// Police
 						else if(p instanceof Police) {
-							weight = 0.5;
+							weight = super.customParameters.policeWeight();
 						}
 						// Attacker
 						else if(p instanceof Attacker) {
-							weight = -5.0;
+							weight = super.customParameters.attackerWeight();
 						}
 						
 						double dist = getDistance(neighbour.row(), neighbour.column(), p.getRow(), p.getColumn());

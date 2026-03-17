@@ -13,11 +13,11 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.Statistics;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
+import pedestrian.PedestrianWithVisionParameters;
 import pedestrian.PopulationConfig;
 import pedestrian.PopulationGenerator;
 import signs.EphimeralVisualSign;
@@ -62,10 +62,16 @@ class Main {
     		);
     
     var pedestrianParametersSupplier =
-        new PedestrianParameters.Builder()
+        new PedestrianWithVisionParameters.Builder()
             .fieldAttractionBias(random.nextDouble(1.0, 10.0 ))
             .crowdRepulsion(random.nextDouble(0.1, 0.5))
             .velocityPercent(random.nextDouble(0.3, 1.0))
+			.visionRadius(7.0)
+		    .attackRadius(2.0)
+		    .inertiaWeight(0.05)
+		    .civilianWeight(0.1)
+		    .policeWeight(0.1)
+		    .attackerWeight(0.1)
             .build();
 
     var generator = new PopulationGenerator(automaton.getPedestrianFactory(), automaton);

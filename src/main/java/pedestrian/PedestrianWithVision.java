@@ -11,21 +11,30 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geo
 
 public class PedestrianWithVision extends Pedestrian {
 	
-	
-	//TODO: Incluir parámetro variable en METROS
-	public static final double DEFAULT_VISION = 7.0;
+	/**
+	 * Minimum desirability of a cell so that it is never 0.
+	 */
+	protected static final double DESIRABILITY_EPSILON = 0.00001;
 	
 	// Converted cell approximation
 	protected double visionRadius;
+	protected double attackRadius;
 	
-	public PedestrianWithVision(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton) {
-		super(row, column, parameters, automaton);
-		this.visionRadius = calculateVisionRadiusInCells(DEFAULT_VISION);
-	}
+	protected final PedestrianWithVisionParameters customParameters;
 	
-	public PedestrianWithVision(int row, int column, PedestrianParameters parameters, CellularAutomaton automaton, double visionRadius) {
-		super(row, column, parameters, automaton);
-		this.visionRadius = calculateVisionRadiusInCells(visionRadius);
+	
+	public PedestrianWithVision(int row, int column, PedestrianWithVisionParameters newParameters, CellularAutomaton automaton) {
+		super(row, column, new PedestrianParameters.Builder()
+				.fieldAttractionBias(newParameters.fieldAttractionBias())
+		        .crowdRepulsion(newParameters.crowdRepulsion())
+		        .velocityPercent(newParameters.velocityPercent())
+		        .build(), automaton);
+		
+		this.customParameters = newParameters;
+		
+		// 3. Calculamos los radios usando tus nuevos parámetros
+		this.visionRadius = calculateVisionRadiusInCells(newParameters.visionRadius());
+		this.attackRadius = calculateVisionRadiusInCells(newParameters.attackRadius());
 	}
 	
 	/**

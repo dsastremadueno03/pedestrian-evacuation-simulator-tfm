@@ -5,7 +5,6 @@ import java.util.List;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import static es.uma.lcc.caesium.statistics.Random.random;
 
@@ -24,7 +23,7 @@ public class PopulationGenerator {
 	 * @param defaultParams parameters for individual pedestrian
 	 * @return list of population
 	 */
-		public List<Pedestrian> generatePopulation(PopulationConfig config, PedestrianParameters defaultParams){
+		public List<Pedestrian> generatePopulation(PopulationConfig config, PedestrianWithVisionParameters defaultParams){
 			List<Pedestrian> pedestrians = new ArrayList<Pedestrian>();
 			
 			// Civilians
@@ -41,10 +40,16 @@ public class PopulationGenerator {
 					finalSpeed = finalSpeed * 0.5;
 				
 				// Rebuilding parameters
-				PedestrianParameters finalParams = new PedestrianParameters.Builder()
+				PedestrianWithVisionParameters finalParams = new PedestrianWithVisionParameters.Builder()
 						.fieldAttractionBias(defaultParams.fieldAttractionBias())
 						.crowdRepulsion(defaultParams.crowdRepulsion())
 						.velocityPercent(finalSpeed)
+						.visionRadius(defaultParams.visionRadius())
+					    .attackRadius(defaultParams.attackRadius())
+					    .inertiaWeight(defaultParams.inertiaWeight())
+					    .civilianWeight(defaultParams.civilianWeight())
+					    .policeWeight(defaultParams.policeWeight())
+					    .attackerWeight(defaultParams.attackerWeight())
 						.build();
 				
 				pedestrians.add(factory.getCivilian(loc.row(), loc.column(), finalParams, age));
