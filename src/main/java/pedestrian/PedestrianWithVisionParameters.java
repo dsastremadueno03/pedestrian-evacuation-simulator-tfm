@@ -20,7 +20,7 @@ public record PedestrianWithVisionParameters(
 	   
 	    private double visionRadius = 7.0;
 	    private double attackRadius = 1.5;
-	    private double inertiaWeight = 0.8;
+	    private double inertiaWeight = 1;
 	    private double civilianWeight = 0.5;
 	    private double policeWeight = 0.0;
 	    private double attackerWeight = -10.0;

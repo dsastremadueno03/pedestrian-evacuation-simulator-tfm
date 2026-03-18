@@ -45,13 +45,17 @@ public class PedestriansBehaviorTest {
 		automaton.calculateDistanceMap();
 		
 		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder().build();
+		PedestrianWithVisionParameters pParamsAtt = new PedestrianWithVisionParameters.Builder()
+				.attackerWeight(0)
+				.civilianWeight(100)
+				.build();
 		
 		Civilian obj = new Civilian(5, 10, pParams, automaton, Age.ADULT);
 		Civilian obj2 = new Civilian(10, 10, pParams, automaton, Age.ADULT);
 		Civilian obj3 = new Civilian(4, 10, pParams, automaton, Age.ADULT);
 		Civilian obj4 = new Civilian(2, 10, pParams, automaton, Age.ADULT);
 		Civilian obj5 = new Civilian(7, 10, pParams, automaton, Age.ADULT);
-		Attacker atk = new Attacker(5, 1, pParams, automaton);
+		Attacker atk = new Attacker(5, 1, pParamsAtt, automaton);
 		
 		automaton.addPedestrian(obj);
 		automaton.addPedestrian(obj2);
