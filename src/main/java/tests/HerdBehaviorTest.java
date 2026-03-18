@@ -53,10 +53,7 @@ public class HerdBehaviorTest {
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
 		
-		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder()
-				.velocityPercent(1.0)
-				.fieldAttractionBias(10.0)
-				.build();
+		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder().build();
 		
 		Civilian obj = new Civilian(5, 8, pParams, automaton, Age.ADULT);
 		Civilian obj2 = new Civilian(10, 3, pParams, automaton, Age.ADULT);
