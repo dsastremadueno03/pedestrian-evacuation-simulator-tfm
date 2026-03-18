@@ -110,7 +110,7 @@ public class Civilian extends PedestrianWithVision {
 			// Changes according to whether civilian has seen sign
 			double currentAttraction;
 			if(temporalExitKnown || permanentExitKnown) {
-				currentAttraction = parameters.fieldAttractionBias();
+				currentAttraction = super.customParameters.fieldAttractionBias();
 			} else {
 				currentAttraction = 0;
 			}
@@ -197,8 +197,9 @@ public class Civilian extends PedestrianWithVision {
 						inertiaDesirability = inertiaWeight * joining; 
 					}
 					
-					
-					var desirability = Math.exp(attraction + socialField + inertiaDesirability - repulsion);
+					// Recalibration needed to not get to very high values
+					double recalibrate = (attraction + socialField + inertiaDesirability - repulsion) * 0.1; 
+					var desirability = Math.exp(recalibrate);
 					movements.add(new CivilianMovement(neighbour, desirability));
 					if (desirability < minDesirability)
 						minDesirability = desirability;

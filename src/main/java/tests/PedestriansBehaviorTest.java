@@ -44,10 +44,7 @@ public class PedestriansBehaviorTest {
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
 		
-		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder()
-				.velocityPercent(1.0)
-				.fieldAttractionBias(10.0)
-				.build();
+		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder().build();
 		
 		Civilian obj = new Civilian(5, 10, pParams, automaton, Age.ADULT);
 		Civilian obj2 = new Civilian(10, 10, pParams, automaton, Age.ADULT);

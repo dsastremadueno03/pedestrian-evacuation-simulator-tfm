@@ -59,10 +59,7 @@ class EphimeralSignTest {
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
 		
-		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder()
-				.velocityPercent(1.0)
-				.fieldAttractionBias(10.0)
-				.build();
+		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder().build();
 		
 		Civilian obj = new Civilian(5, 5, pParams, automaton, Age.ADULT);
 		

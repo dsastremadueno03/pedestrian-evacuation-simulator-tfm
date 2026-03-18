@@ -14,7 +14,7 @@ public record PedestrianWithVisionParameters(
 	
 	
 	public static final class Builder {
-	    private double fieldAttractionBias = 1.0;
+	    private double fieldAttractionBias = 100.0;
 	    private double crowdRepulsion = 1.10;
 	    private double velocityPercent = 1.0;
 	   
