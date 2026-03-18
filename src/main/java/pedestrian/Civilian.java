@@ -79,10 +79,24 @@ public class Civilian extends PedestrianWithVision {
 					// cannot make a movement
 					return Optional.empty();
 				}
-
+				
+				// GREEDY
+				if(random.nextDouble() < super.customParameters.greedyProb()) {
+					CivilianMovement bestMove = movements.get(0);
+		            for (CivilianMovement m : movements) {
+		                if (m.desirability() > bestMove.desirability()) {
+		                    bestMove = m;
+		                }
+		            }
+		            return Optional.of(bestMove.location());
+				} 
+				// RANDOM
+				else {
 				// choose one movement according to discrete distribution of desirabilities
 				var chosen = random.discrete(movements, CivilianMovement::desirability);
 				return Optional.of(chosen.location());
+				}
+				
 			} else {
 				// do not move at this step to respect pedestrian speed
 				return Optional.empty();

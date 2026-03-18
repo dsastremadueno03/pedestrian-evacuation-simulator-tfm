@@ -9,7 +9,8 @@ public record PedestrianWithVisionParameters(
 	    double inertiaWeight,
 	    double civilianWeight,
 	    double policeWeight,
-	    double attackerWeight) {
+	    double attackerWeight,
+	    double greedyProb) {
 	
 	
 	
@@ -24,6 +25,7 @@ public record PedestrianWithVisionParameters(
 	    private double civilianWeight = 0.5;
 	    private double policeWeight = 0.0;
 	    private double attackerWeight = -10.0;
+	    private double greedyProb = 0.7;
 
 	    public Builder() {}
 
@@ -73,12 +75,24 @@ public record PedestrianWithVisionParameters(
 	      this.attackerWeight = attackerWeight;
 	      return this;
 	    }
+	    
+	    public Builder greedyProb(double greedyProb) {
+		      this.greedyProb = greedyProb;
+		      return this;
+		}
 
 	    public PedestrianWithVisionParameters build() {
 	      return new PedestrianWithVisionParameters(
-	          fieldAttractionBias, crowdRepulsion, velocityPercent,
-	          visionRadius, attackRadius, 
-	          inertiaWeight, civilianWeight, policeWeight, attackerWeight
+	          fieldAttractionBias, 
+	          crowdRepulsion, 
+	          velocityPercent,
+	          visionRadius, 
+	          attackRadius, 
+	          inertiaWeight, 
+	          civilianWeight, 
+	          policeWeight, 
+	          attackerWeight, 
+	          greedyProb
 	      );
 	    }
 	  }
