@@ -10,16 +10,16 @@ import org.junit.jupiter.api.Test;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.PedestrianWithVision;
+import pedestrian.PedestrianWithVisionParameters;
 
 class VisibilityRadiusTest {
 
 	private SpecificCellularAutomaton automaton;
-	private PedestrianParameters defaultParams;
+	private PedestrianWithVisionParameters defaultParams;
 	private final int ROWS = 10;
 	private final int COLS = 10;
 
@@ -44,12 +44,12 @@ class VisibilityRadiusTest {
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
 		
-		defaultParams = new PedestrianParameters.Builder().build();
+		defaultParams = new PedestrianWithVisionParameters.Builder().visionRadius(2).build();
 	}
 	
 	@Test
 	void testPedestrianBlocksVisionVerticalHorizontal() {
-		PedestrianWithVision observer = new PedestrianWithVision(5, 5, defaultParams, automaton, 2);
+		PedestrianWithVision observer = new PedestrianWithVision(5, 5, defaultParams, automaton);
 		automaton.addPedestrian(observer);
 		
 		assertTrue(automaton.isCellOccupied(5,5), "Cell (5,5) should be occupied!");

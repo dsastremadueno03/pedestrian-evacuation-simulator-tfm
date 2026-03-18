@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
 import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Age;
 import pedestrian.Civilian;
+import pedestrian.PedestrianWithVisionParameters;
 import signs.EvacuationPlanSign;
 
 public class HerdBehaviorTest {
@@ -53,7 +53,7 @@ public class HerdBehaviorTest {
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
 		
-		PedestrianParameters pParams = new PedestrianParameters.Builder()
+		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder()
 				.velocityPercent(1.0)
 				.fieldAttractionBias(10.0)
 				.build();

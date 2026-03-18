@@ -5,13 +5,13 @@ import org.junit.jupiter.api.Test;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.PedestrianParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
 import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Age;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
+import pedestrian.PedestrianWithVisionParameters;
 
 public class PedestriansBehaviorTest {
 
@@ -44,7 +44,7 @@ public class PedestriansBehaviorTest {
 		automaton.calculateVisibilityMap();
 		automaton.calculateDistanceMap();
 		
-		PedestrianParameters pParams = new PedestrianParameters.Builder()
+		PedestrianWithVisionParameters pParams = new PedestrianWithVisionParameters.Builder()
 				.velocityPercent(1.0)
 				.fieldAttractionBias(10.0)
 				.build();
@@ -54,7 +54,7 @@ public class PedestriansBehaviorTest {
 		Civilian obj3 = new Civilian(4, 10, pParams, automaton, Age.ADULT);
 		Civilian obj4 = new Civilian(2, 10, pParams, automaton, Age.ADULT);
 		Civilian obj5 = new Civilian(7, 10, pParams, automaton, Age.ADULT);
-		Attacker atk = new Attacker(5, 1, pParams, automaton, 2, 1);
+		Attacker atk = new Attacker(5, 1, pParams, automaton);
 		
 		automaton.addPedestrian(obj);
 		automaton.addPedestrian(obj2);
