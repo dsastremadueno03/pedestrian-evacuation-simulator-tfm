@@ -44,10 +44,23 @@ public class Attacker extends PedestrianWithVision {
 				// cannot make a movement
 				return Optional.empty();
 			}
-
+			
+			// GREEDY
+			if(random.nextDouble() < super.customParameters.greedyProb()) {
+				AttackerMovement bestMove = movements.get(0);
+	            for (AttackerMovement m : movements) {
+	                if (m.desirability() > bestMove.desirability()) {
+	                    bestMove = m;
+	                }
+	            }
+	            return Optional.of(bestMove.location());
+			} 
+			// RANDOM
+			else {
 			// choose one movement according to discrete distribution of desirabilities
 			var chosen = random.discrete(movements, AttackerMovement::desirability);
 			return Optional.of(chosen.location());
+			}
 		} else {
 			// do not move at this step to respect pedestrian speed
 			return Optional.empty();
@@ -146,8 +159,9 @@ public class Attacker extends PedestrianWithVision {
 					inertiaDesirability = inertiaWeight * joining; 
 				}
 				
-				
-				var desirability = Math.exp(socialField + inertiaDesirability);
+				// Recalibration needed to not get to very high values
+				double recalibrate = (socialField + inertiaDesirability) * 0.1; 
+				var desirability = Math.exp(recalibrate);
 				movements.add(new AttackerMovement(neighbour, desirability));
 				if (desirability < minDesirability)
 					minDesirability = desirability;
