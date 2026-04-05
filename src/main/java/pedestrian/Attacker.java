@@ -47,13 +47,27 @@ public class Attacker extends PedestrianWithVision {
 			
 			// GREEDY
 			if(random.nextDouble() < super.customParameters.greedyProb()) {
-				AttackerMovement bestMove = movements.get(0);
-	            for (AttackerMovement m : movements) {
-	                if (m.desirability() > bestMove.desirability()) {
-	                    bestMove = m;
-	                }
-	            }
-	            return Optional.of(bestMove.location());
+				double maxDesirability = -Double.MAX_VALUE;
+			    for (AttackerMovement m : movements) {
+			        if (m.desirability() > maxDesirability) {
+			            maxDesirability = m.desirability();
+			        }
+			    }
+			    
+			    // Storing best moves
+			    List<AttackerMovement> bestMovements = new ArrayList<>();
+			    for (AttackerMovement m : movements) {
+			        // Compared to almost zero (avoid problems with perfect 0)
+			        if (Math.abs(m.desirability() - maxDesirability) < 1e-10) {
+			            bestMovements.add(m);
+			        }
+			    }
+			    
+			    // Random selection among best moves
+			    int randomIndex = (int)(random.nextDouble() * bestMovements.size());
+			    AttackerMovement chosenBest = bestMovements.get(randomIndex);
+			    
+			    return Optional.of(chosenBest.location());
 			} 
 			// RANDOM
 			else {

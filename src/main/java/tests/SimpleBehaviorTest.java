@@ -52,7 +52,7 @@ public class SimpleBehaviorTest {
 				.fieldAttractionBias(0)
 				.greedyProb(1)
 				.inertiaWeight(0)
-				.visionRadius(100)
+				.visionRadius(500)
 				.build();
 		PedestrianWithVisionParameters pParamsAtt = new PedestrianWithVisionParameters.Builder()
 				.attackerWeight(0)
@@ -62,7 +62,7 @@ public class SimpleBehaviorTest {
 				.greedyProb(1)
 				.inertiaWeight(0)
 				.policeWeight(0)
-				.visionRadius(100)
+				.visionRadius(500)
 				.build();
 		
 		Civilian obj = new Civilian(5, 3, pParams, automaton, Age.ADULT);
