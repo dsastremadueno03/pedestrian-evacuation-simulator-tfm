@@ -128,7 +128,7 @@ public class Attacker extends PedestrianWithVision {
 	 */
 	private List<AttackerMovement> computeCustomDesirabilities() {
 		SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
-		
+		var scenario = automaton.getScenario();
 		// Allows staying in the same cell
 		var neighbours = automaton.neighbours(row, column);
 		List<Location> candidates = new ArrayList<>(neighbours);
@@ -166,6 +166,19 @@ public class Attacker extends PedestrianWithVision {
 		
 		// Checks if same cell or reachable cells
 		for (var neighbour : candidates) {
+			// Ignore exits
+			boolean isExit = false;
+	        if (scenario.exits() != null) {
+	            for (var exit : scenario.exits()) {
+	                if (exit.intersects(neighbour)) {
+	                    isExit = true;
+	                    break;
+	                }
+	            }
+	        }
+	        if (isExit)
+	        	continue;
+			
 			if ((neighbour.row() == this.row && neighbour.column() == this.column) 
 					|| myAutomaton.isCellReachable(neighbour)) {
 				for (var around : myAutomaton.neighbours(neighbour)) {

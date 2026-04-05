@@ -127,7 +127,7 @@ public class Police extends PedestrianWithVision {
 	 */
 	private List<PoliceMovement> computeCustomDesirabilities() {
 		SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
-		
+		var scenario = automaton.getScenario();
 		// Allows staying in the same cell
 		var neighbours = automaton.neighbours(row, column);
 		List<Location> candidates = new ArrayList<>(neighbours);
@@ -165,6 +165,19 @@ public class Police extends PedestrianWithVision {
 		
 		// Checks if same cell or reachable cells
 		for (var neighbour : candidates) {
+			// Ignore exits
+			boolean isExit = false;
+			if (scenario.exits() != null) {
+				for (var exit : scenario.exits()) {
+					if (exit.intersects(neighbour)) {
+						isExit = true;
+				        break;
+				    }
+				 }
+			}
+			if (isExit)
+					continue;
+
 			if ((neighbour.row() == this.row && neighbour.column() == this.column) 
 					|| myAutomaton.isCellReachable(neighbour)) {
 				for (var around : myAutomaton.neighbours(neighbour)) {
@@ -233,6 +246,9 @@ public class Police extends PedestrianWithVision {
 	@Override
 	public void paint(Canvas canvas, Color fillColor, Color outlineColor) {
 		super.paint(canvas, Color.BLUE, outlineColor);
+		if(!this.isAlive) { // Dead
+			super.paint(canvas, Color.BLACK, Color.BLUE);
+		}
 	}
 	
 	@Override
