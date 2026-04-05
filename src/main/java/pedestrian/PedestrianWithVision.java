@@ -19,6 +19,7 @@ public class PedestrianWithVision extends Pedestrian {
 	// Converted cell approximation
 	protected double visionRadius;
 	protected double attackRadius;
+	protected boolean isAlive;
 	
 	protected final PedestrianWithVisionParameters customParameters;
 	
@@ -31,10 +32,18 @@ public class PedestrianWithVision extends Pedestrian {
 		        .build(), automaton);
 		
 		this.customParameters = newParameters;
+		this.isAlive = true;
 		
-		// 3. Calculamos los radios usando tus nuevos parámetros
 		this.visionRadius = calculateVisionRadiusInCells(newParameters.visionRadius());
 		this.attackRadius = calculateVisionRadiusInCells(newParameters.attackRadius());
+	}
+	
+	public void receiveAttack() {
+		this.isAlive = false;
+	}
+	
+	public boolean isAlive() {
+		return this.isAlive;
 	}
 	
 	/**

@@ -70,6 +70,10 @@ public class Civilian extends PedestrianWithVision {
 		 */
 		@Override
 		public Optional<Location> chooseMovement() {
+			// Checks civilian is alive
+			if(!this.isAlive) {
+				return Optional.empty();
+			}
 			
 			updateDetection();
 			
@@ -199,7 +203,9 @@ public class Civilian extends PedestrianWithVision {
 					// Differentiation between Pedestrian types
 					for(PedestrianWithVision p : visiblePeople) {
 						double weight = 0;
-						
+						if(!p.isAlive) {
+							continue;
+						}
 						// Civilian
 						if(p instanceof Civilian) {
 							weight = super.customParameters.civilianWeight();
@@ -269,7 +275,9 @@ public class Civilian extends PedestrianWithVision {
 			default:
 				throw new IllegalArgumentException("Unexpected value: " + ageGroup);
 			}
-
+			if(!this.isAlive) { // Dead
+				super.paint(canvas, new Color(150, 0, 0), Color.BLACK);
+			}
 		}
 		
 		@Override

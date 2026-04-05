@@ -24,9 +24,38 @@ public class Attacker extends PedestrianWithVision {
 		return super.attackRadius <= 1;
 	}
 	
+	public boolean attack() {
+		SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
+		
+		PedestrianWithVision target = null;
+		double minDistance = Double.MAX_VALUE;
+		for(Location loc : computeVisibleCells()) {
+			Pedestrian p = myAutomaton.getPedestrianAt(loc.row(), loc.column());
+			
+			if(p instanceof Civilian || p instanceof Police) {
+				PedestrianWithVision c = (PedestrianWithVision) p;
+				if(c.isAlive()) {
+					double dist = getDistance(this.row, this.column, c.getRow(), c.getColumn());
+					if(dist <= super.attackRadius) {
+						if(dist < minDistance) {
+							minDistance = dist;
+							target = c;
+						}
+					}
+				}
+			}
+		}
+		
+		if(target != null) {
+			target.receiveAttack();
+			return true;
+		}
+		return false;
+	}
+	
 	//Since TentativeMovement cannot be created, AttackerMovement is created
 	private record AttackerMovement(Location location, double desirability) {}
-			
+	
 	
 	/**
 	 * Choose randomly pedestrian's next move from those computed by
@@ -37,6 +66,16 @@ public class Attacker extends PedestrianWithVision {
 	 */
 	@Override
 	public Optional<Location> chooseMovement() {
+		// Checks is alive
+		if(!this.isAlive) {
+			return Optional.empty();
+		}
+		
+		// First, tries to attack
+		if(attack()) {
+			// cannot make a movement
+			return Optional.empty();
+		}
 		
 		if (random.bernoulli(parameters.velocityPercent())) {
 			List<AttackerMovement> movements = computeCustomDesirabilities();
@@ -145,9 +184,11 @@ public class Attacker extends PedestrianWithVision {
 				// Differentiation between Pedestrian types
 				for(PedestrianWithVision p : visiblePeople) {
 					double weight = 0;
-					
+					if(!p.isAlive) {
+						continue;
+					}
 					// Civilian
-					if(p instanceof Civilian) {
+					else if(p instanceof Civilian) {
 						weight = super.customParameters.civilianWeight();
 					}
 					// Police
@@ -198,6 +239,9 @@ public class Attacker extends PedestrianWithVision {
 	@Override
 	public void paint(Canvas canvas, Color fillColor, Color outlineColor) {
 		super.paint(canvas, Color.RED, outlineColor);
+		if(!this.isAlive) { // Dead
+			super.paint(canvas, Color.BLACK, Color.RED);
+		}
 	}
 	
 	@Override
