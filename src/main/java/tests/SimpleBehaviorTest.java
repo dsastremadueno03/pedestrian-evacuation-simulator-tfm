@@ -65,7 +65,7 @@ public class SimpleBehaviorTest {
 				.visionRadius(100)
 				.build();
 		
-		Civilian obj = new Civilian(5, 2, pParams, automaton, Age.ADULT);
+		Civilian obj = new Civilian(5, 3, pParams, automaton, Age.ADULT);
 		Attacker atk = new Attacker(5, 1, pParamsAtt, automaton);
 		
 		automaton.addPedestrian(obj);

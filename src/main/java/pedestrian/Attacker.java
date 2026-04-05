@@ -79,9 +79,13 @@ public class Attacker extends PedestrianWithVision {
 	 */
 	private List<AttackerMovement> computeCustomDesirabilities() {
 		SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
+		
+		// Allows staying in the same cell
 		var neighbours = automaton.neighbours(row, column);
+		List<Location> candidates = new ArrayList<>(neighbours);
+		candidates.add(new Location(this.row, this.column));
 
-		var movements = new ArrayList<AttackerMovement>(neighbours.size());
+		var movements = new ArrayList<AttackerMovement>(candidates.size());
 		double minDesirability = Double.MAX_VALUE;
 		
 		// Calculate inertia vector for movement desirability
@@ -111,9 +115,10 @@ public class Attacker extends PedestrianWithVision {
 			}
 		}
 		
-		
-		for (var neighbour : neighbours) {
-			if (myAutomaton.isCellReachable(neighbour)) {
+		// Checks if same cell or reachable cells
+		for (var neighbour : candidates) {
+			if ((neighbour.row() == this.row && neighbour.column() == this.column) 
+					|| myAutomaton.isCellReachable(neighbour)) {
 				for (var around : myAutomaton.neighbours(neighbour)) {
 					if (myAutomaton.isCellReachable(around)) {
 					}
@@ -141,7 +146,7 @@ public class Attacker extends PedestrianWithVision {
 					}
 					
 					double dist = getDistance(neighbour.row(), neighbour.column(), p.getRow(), p.getColumn());
-					dist = Math.max(0.1, dist); // Prevent from 0 division
+					dist = Math.max(0.00001, dist); // Prevent from 0 division
 					
 					socialField += weight * (1 / dist);
 					

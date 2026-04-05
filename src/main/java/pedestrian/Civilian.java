@@ -116,9 +116,13 @@ public class Civilian extends PedestrianWithVision {
 		private List<CivilianMovement> computeCustomDesirabilities() {
 			SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
 			var scenario = automaton.getScenario();
+			
+			// Allows staying in the same cell
 			var neighbours = automaton.neighbours(row, column);
+			List<Location> candidates = new ArrayList<>(neighbours);
+			candidates.add(new Location(this.row, this.column));
 
-			var movements = new ArrayList<CivilianMovement>(neighbours.size());
+			var movements = new ArrayList<CivilianMovement>(candidates.size());
 			double minDesirability = Double.MAX_VALUE;
 
 			// Changes according to whether civilian has seen sign
@@ -157,9 +161,11 @@ public class Civilian extends PedestrianWithVision {
 			}
 			
 			
-			for (var neighbour : neighbours) {
-				if (myAutomaton.isCellReachable(neighbour)) {
-					// count reachable cells around new location
+			// Checks if same cell or reachable cells
+			for (var neighbour : candidates) {
+				if ((neighbour.row() == this.row && neighbour.column() == this.column) 
+						|| myAutomaton.isCellReachable(neighbour)) {
+					// Count reachable cells around new location
 					var numberOfReachableCellsAround = 0;
 					for (var around : myAutomaton.neighbours(neighbour)) {
 						if (myAutomaton.isCellReachable(around)) {
@@ -193,7 +199,7 @@ public class Civilian extends PedestrianWithVision {
 						}
 						
 						double dist = getDistance(neighbour.row(), neighbour.column(), p.getRow(), p.getColumn());
-						dist = Math.max(0.1, dist); // Prevent from 0 division
+						dist = Math.max(0.00001, dist); // Prevent from 0 division
 						
 						socialField += weight * (1 / dist);
 						
