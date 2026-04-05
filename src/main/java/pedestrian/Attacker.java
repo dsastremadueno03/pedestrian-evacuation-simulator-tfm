@@ -19,10 +19,6 @@ public class Attacker extends PedestrianWithVision {
 	public Attacker(int row, int column, PedestrianWithVisionParameters parameters, CellularAutomaton automaton){
 		super(row, column, parameters, automaton);
 	}
-
-	public boolean isMelee() {
-		return super.attackRadius <= 1;
-	}
 	
 	public boolean attack() {
 		SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
