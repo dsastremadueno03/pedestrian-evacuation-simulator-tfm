@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
 import es.uma.lcc.caesium.statistics.Random;
@@ -23,6 +24,7 @@ public class SimpleBehaviorTest {
 	@BeforeEach
 	void start() {
 		Random.random.setSeed(4);
+		
 		scenario = new Scenario.Builder()
 				.rows(50)
 				.columns(50)
@@ -30,13 +32,17 @@ public class SimpleBehaviorTest {
 				.build();
 		
 		scenario.setExit(new Rectangle(0, 50, 10, 0));
-		
-		params = new CellularAutomatonParameters.Builder()
-				.scenario(scenario)
-				.timeLimit(1000)
-				.build();
-		
-		automaton = new SpecificCellularAutomaton(params);
+
+	    var cellularAutomatonParameters =
+	        new CellularAutomatonParameters.Builder()
+	            .scenario(scenario) // use this scenario
+	            .timeLimit(10 * 60) // 10 minutes is time limit for simulation
+	            .neighbourhood(MooreNeighbourhood::of) // use Moore's Neighbourhood for automaton
+	            .pedestrianReferenceVelocity(1.3) // fastest pedestrians walk at 1.3 m/s
+	            .GUITimeFactor(8) // perform GUI animation x8 times faster than real time
+	            .build();
+
+	    automaton = new SpecificCellularAutomaton(cellularAutomatonParameters);
 	}
 
 	@Test
@@ -55,6 +61,7 @@ public class SimpleBehaviorTest {
 				.visionRadius(500)
 				.build();
 		PedestrianWithVisionParameters pParamsAtt = new PedestrianWithVisionParameters.Builder()
+				.attackRadius(0)
 				.attackerWeight(0)
 				.civilianWeight(100)
 				.crowdRepulsion(0)
