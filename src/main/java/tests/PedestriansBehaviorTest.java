@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
 import es.uma.lcc.caesium.statistics.Random;
@@ -31,12 +32,16 @@ public class PedestriansBehaviorTest {
 		
 		scenario.setExit(new Rectangle(0, 50, 10, 0));
 		
-		params = new CellularAutomatonParameters.Builder()
-				.scenario(scenario)
-				.timeLimit(1000)
-				.build();
-		
-		automaton = new SpecificCellularAutomaton(params);
+		var cellularAutomatonParameters =
+		        new CellularAutomatonParameters.Builder()
+		            .scenario(scenario) // use this scenario
+		            .timeLimit(10 * 60) // 10 minutes is time limit for simulation
+		            .neighbourhood(MooreNeighbourhood::of) // use Moore's Neighbourhood for automaton
+		            .pedestrianReferenceVelocity(1.3) // fastest pedestrians walk at 1.3 m/s
+		            .GUITimeFactor(8) // perform GUI animation x8 times faster than real time
+		            .build();
+
+		    automaton = new SpecificCellularAutomaton(cellularAutomatonParameters);
 	}
 
 	@Test
@@ -55,7 +60,7 @@ public class PedestriansBehaviorTest {
 		Civilian obj3 = new Civilian(4, 10, pParams, automaton, Age.ADULT);
 		Civilian obj4 = new Civilian(2, 10, pParams, automaton, Age.ADULT);
 		Civilian obj5 = new Civilian(7, 10, pParams, automaton, Age.ADULT);
-		Attacker atk = new Attacker(5, 1, pParamsAtt, automaton);
+		Attacker atk = new Attacker(30, 1, pParamsAtt, automaton);
 		
 		automaton.addPedestrian(obj);
 		automaton.addPedestrian(obj2);
