@@ -1,11 +1,11 @@
 package run;
 
-import java.math.BigDecimal;
-
 import com.github.cliftonlabs.json_simple.JsonArray;
 import com.github.cliftonlabs.json_simple.JsonObject;
 
+import es.uma.lcc.caesium.ea.util.JsonUtil;
 import es.uma.lcc.caesium.statistics.Random;
+import pedestrian.PopulationConfig;
 
 public class ExtraJsonParameterLoader {
 	
@@ -21,8 +21,9 @@ public class ExtraJsonParameterLoader {
 			return 0.0;
 		}
 		
-		double min = ((BigDecimal)rangesJson.get("min")).doubleValue();
-		double max = ((BigDecimal)rangesJson.get("max")).doubleValue();
+		// JSON is in BigDecimal
+		double min = JsonUtil.getDouble(rangesJson, "min");
+		double max = JsonUtil.getDouble(rangesJson, "max");
 	
 		if(min == max) {
 			return max;
@@ -31,6 +32,11 @@ public class ExtraJsonParameterLoader {
 		return Random.random.nextDouble(min, max);
 	}
 	
+	/**
+	 * Organizes read data in a social weight matrix
+	 * @param matrix data from JSON
+	 * @return matrix with social weights
+	 */
 	public static double[][] loadSocialWeightsMatrix(JsonArray matrix){
 		if(matrix == null || matrix.size() < PEDESTRIAN_TYPES) {
 			System.err.println("Error en el JsonArray!");
@@ -50,5 +56,26 @@ public class ExtraJsonParameterLoader {
 			}
 		}
 		return M;
+	}
+	
+	public static PopulationConfig loadPopulationConfig(JsonObject population) {
+		if(population == null) {
+			System.err.println("Error en el JsonArray!");
+			return null;
+		}
+		
+		int civ = JsonUtil.getInt(population, "numCivilians");
+		int att = JsonUtil.getInt(population, "numAttackers");
+		int pol = JsonUtil.getInt(population, "numPolice");
+		
+		double pChild = JsonUtil.getDouble(population, "pChild");
+		double pAdult = JsonUtil.getDouble(population, "pAdult");
+		double pElder = JsonUtil.getDouble(population, "pElder");
+		
+		if(pChild + pAdult + pElder != 1.0) {
+			System.err.println("Error en el JsonArray!");
+		}
+		
+		return new PopulationConfig(civ, att, pol, pChild, pAdult, pElder);
 	}
 }
