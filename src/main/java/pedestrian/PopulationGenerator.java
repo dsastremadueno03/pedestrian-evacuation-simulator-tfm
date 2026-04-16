@@ -23,13 +23,19 @@ public class PopulationGenerator {
 	 * @param defaultParams parameters for individual pedestrian
 	 * @return list of population
 	 */
-		public List<Pedestrian> generatePopulation(PopulationConfig config, PedestrianWithVisionParameters defaultParams){
+		public List<Pedestrian> generatePopulation(PopulationConfig config, 
+				List<PedestrianWithVisionParameters> civParamsList,
+				List<PedestrianWithVisionParameters> atkParamsList,
+				List<PedestrianWithVisionParameters> polParamsList){
+			
 			List<Pedestrian> pedestrians = new ArrayList<Pedestrian>();
 			
 			// Civilians
 			for(int i = 0; i < config.numCivilians(); i++) {
 				Location loc = getRandomEmptyLocation();
 				Age age = determineAge(config);
+				
+				PedestrianWithVisionParameters defaultParams = civParamsList.get(i);
 				
 				double finalSpeed = defaultParams.velocityPercent();
 				
@@ -50,23 +56,24 @@ public class PopulationGenerator {
 					    .civilianWeight(defaultParams.civilianWeight())
 					    .policeWeight(defaultParams.policeWeight())
 					    .attackerWeight(defaultParams.attackerWeight())
+					    .greedyProb(defaultParams.greedyProb())
 						.build();
 				
 				pedestrians.add(factory.getCivilian(loc.row(), loc.column(), finalParams, age));
 			}
 			
 			// Attackers
-			// TODO: Ajustar parámetros de campo de visión y agresividad
 			for(int i = 0; i < config.numAttackers(); i++) {
 				Location loc = getRandomEmptyLocation();
-				pedestrians.add(factory.getAttacker(loc.row(), loc.column(), defaultParams, 5, 80));
+				PedestrianWithVisionParameters attParams = atkParamsList.get(i);
+				pedestrians.add(factory.getAttacker(loc.row(), loc.column(), attParams, 5));
 			}
 			
 			// Police
-			// TODO: Ajustar parámetros de campo de visión
 			for(int i = 0; i < config.numPolice(); i++) {
 				Location loc = getRandomEmptyLocation();
-				pedestrians.add(factory.getPolice(loc.row(), loc.column(), defaultParams, 3));
+				PedestrianWithVisionParameters polParams = polParamsList.get(i);
+				pedestrians.add(factory.getPolice(loc.row(), loc.column(), polParams, 3));
 			}
 			
 			return pedestrians;
