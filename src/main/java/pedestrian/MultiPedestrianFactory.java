@@ -19,12 +19,12 @@ public class MultiPedestrianFactory extends PedestrianFactory {
 		  return new Civilian(row, column, parameters, automaton, ageGroup);
 	  }
 
-	public Attacker getAttacker(int row, int column, PedestrianWithVisionParameters parameters, int attackRange) {
+	public Attacker getAttacker(int row, int column, PedestrianWithVisionParameters parameters) {
 		validateCoordinates(row, column);
 		return new Attacker(row, column, parameters, automaton);
 	}
 
-	public Police getPolice(int row, int column, PedestrianWithVisionParameters parameters, int attackRange) {
+	public Police getPolice(int row, int column, PedestrianWithVisionParameters parameters) {
 		validateCoordinates(row, column);
 		return new Police(row, column, parameters, automaton);
 	}

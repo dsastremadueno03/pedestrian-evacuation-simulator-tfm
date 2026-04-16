@@ -66,14 +66,14 @@ public class PopulationGenerator {
 			for(int i = 0; i < config.numAttackers(); i++) {
 				Location loc = getRandomEmptyLocation();
 				PedestrianWithVisionParameters attParams = atkParamsList.get(i);
-				pedestrians.add(factory.getAttacker(loc.row(), loc.column(), attParams, 5));
+				pedestrians.add(factory.getAttacker(loc.row(), loc.column(), attParams));
 			}
 			
 			// Police
 			for(int i = 0; i < config.numPolice(); i++) {
 				Location loc = getRandomEmptyLocation();
 				PedestrianWithVisionParameters polParams = polParamsList.get(i);
-				pedestrians.add(factory.getPolice(loc.row(), loc.column(), polParams, 3));
+				pedestrians.add(factory.getPolice(loc.row(), loc.column(), polParams));
 			}
 			
 			return pedestrians;
