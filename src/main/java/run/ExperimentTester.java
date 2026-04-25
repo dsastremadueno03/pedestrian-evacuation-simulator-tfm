@@ -42,7 +42,7 @@ public class ExperimentTester {
 		
 		try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
 			// Header
-			w.println("id_experiment,civilians_exit,civilians_kill,civilians_alive,police_alive,killers_alive,total_turns,time_max");
+			w.println("Experiment id,Civilians Evacuated,Civilians Killed,Civilians Trapped,Attackers Alive,Police Alive,Mean Time,Median Time,Mean Steps,Median Steps");
 			
 			// Read JSON
 			FileReader r = new FileReader("data/experiments.json");
