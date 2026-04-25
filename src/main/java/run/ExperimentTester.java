@@ -24,8 +24,11 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
+import pedestrian.Attacker;
+import pedestrian.Civilian;
 import pedestrian.MultiPedestrianFactory;
 import pedestrian.PedestrianWithVisionParameters;
+import pedestrian.Police;
 import pedestrian.PopulationConfig;
 import pedestrian.PopulationGenerator;
 import signs.EphimeralVisualSign;
@@ -42,7 +45,7 @@ public class ExperimentTester {
 			w.println("id_experiment,civilians_exit,civilians_kill,civilians_alive,police_alive,killers_alive,total_turns,time_max");
 			
 			// Read JSON
-			FileReader r = new FileReader("experiments.json");
+			FileReader r = new FileReader("data/experiments.json");
 			JsonObject jsonMain = (JsonObject) Jsoner.deserialize(r);
 			JsonArray listOfExperiments = (JsonArray) jsonMain.get("experiments");
 			
@@ -120,10 +123,49 @@ public class ExperimentTester {
 			    // Collect metrics
 			    Statistics statistics = automaton.computeStatistics();
 			    System.out.println(statistics);
+			    
+			    // Our extended metrics
+			    int civDead = 0;
+			    int civEvacuated = statistics.numberOfEvacuees();
+			    int civTrapped = populationConfig.numCivilians() - civEvacuated - civDead;
+			    int attAlive = 0;
+			    int polAlive = 0;
+			    
+			    for(Pedestrian p : crowd) {
+			    	if(p instanceof Civilian) {
+			    		if(!((Civilian) p).isAlive()) {
+			    			civDead++;
+			    		}
+			    	}
+			    	else if (p instanceof Attacker) {
+			    		if(((Attacker) p).isAlive()) {
+			    			attAlive++;
+			    		}
+			    	}
+			    	else if (p instanceof Police) {
+			    		if(((Police) p).isAlive()) {
+			    			polAlive++;
+			    		}
+			    	}
+			    }
+			    
+			    // Write statistics to csv file
+			    w.println(idExperiment + "," +
+			    		civEvacuated + "," +
+			    		civDead + "," +
+			    		civTrapped + "," +
+			    		attAlive + "," +
+			    		polAlive + "," +
+			    		statistics.meanEvacuationTime() + "," +
+			    		statistics.medianEvacuationTime() + "," +
+			    		statistics.meanSteps() + "," +
+			    		statistics.medianSteps());
+			    
+			    w.flush();
 
 			    // Write trace to json file
 			    var trace = automaton.getTrace();
-			    String fileName = "data/traces/trace.json";
+			    String fileName = "data/traces/trace_experiment_" + idExperiment + ".json";
 			    
 			    File file = new File(fileName);
 			    if (file.getParentFile() != null) {
