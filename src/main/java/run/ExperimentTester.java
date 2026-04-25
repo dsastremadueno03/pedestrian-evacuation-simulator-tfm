@@ -131,6 +131,7 @@ public class ExperimentTester {
 			    int attAlive = 0;
 			    int polAlive = 0;
 			    
+			    // TODO: Problema con conteo de civiles
 			    for(Pedestrian p : crowd) {
 			    	if(p instanceof Civilian) {
 			    		if(!((Civilian) p).isAlive()) {
