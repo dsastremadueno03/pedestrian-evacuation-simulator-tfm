@@ -123,7 +123,7 @@ public class ExperimentTester {
 			    // Collect metrics
 			    Statistics statistics = automaton.computeStatistics();
 			    System.out.println(statistics);
-			    
+			    			    
 			    // Our extended metrics
 			    int civDead = 0;
 			    int civEvacuated = statistics.numberOfEvacuees();
@@ -149,6 +149,19 @@ public class ExperimentTester {
 			    	}
 			    }
 			    
+			    // Fix mean and median if evacuees less than 2
+			    double meanEvacuationTime = statistics.meanEvacuationTime();
+			    double meanSteps = statistics.meanSteps();
+			    double medianEvacuationTime = 0;
+			    double medianSteps = 0;
+			    if(civEvacuated >= 2) {
+			    	medianEvacuationTime = statistics.medianEvacuationTime();
+				    medianSteps = statistics.medianSteps();
+			    } else {
+			    	medianEvacuationTime = meanEvacuationTime;
+				    medianSteps = meanSteps;
+			    }
+			    
 			    // Write statistics to csv file
 			    w.println(idExperiment + "," +
 			    		civEvacuated + "," +
@@ -156,10 +169,10 @@ public class ExperimentTester {
 			    		civTrapped + "," +
 			    		attAlive + "," +
 			    		polAlive + "," +
-			    		statistics.meanEvacuationTime() + "," +
-			    		statistics.medianEvacuationTime() + "," +
-			    		statistics.meanSteps() + "," +
-			    		statistics.medianSteps());
+			    		meanEvacuationTime + "," +
+			    		medianEvacuationTime + "," +
+			    		meanSteps + "," +
+			    		medianSteps);
 			    
 			    w.flush();
 
