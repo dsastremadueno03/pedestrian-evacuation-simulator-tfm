@@ -127,11 +127,10 @@ public class ExperimentTester {
 			    // Our extended metrics
 			    int civDead = 0;
 			    int civEvacuated = statistics.numberOfEvacuees();
-			    int civTrapped = populationConfig.numCivilians() - civEvacuated - civDead;
 			    int attAlive = 0;
 			    int polAlive = 0;
 			    
-			    // TODO: Problema con conteo de civiles
+			    // Count types of pedestrians
 			    for(Pedestrian p : crowd) {
 			    	if(p instanceof Civilian) {
 			    		if(!((Civilian) p).isAlive()) {
@@ -149,6 +148,8 @@ public class ExperimentTester {
 			    		}
 			    	}
 			    }
+			    
+			    int civTrapped = populationConfig.numCivilians() - civEvacuated - civDead;
 			    
 			    // Fix mean and median if evacuees less than 2
 			    double meanEvacuationTime = statistics.meanEvacuationTime();
