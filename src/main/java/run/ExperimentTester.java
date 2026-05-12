@@ -118,15 +118,38 @@ public class ExperimentTester {
 			    automaton.calculateDistanceMap();
 
 			    System.out.println("Simulating...");
-			    automaton.run();
 			    
-			    // Collect metrics
-			    Statistics statistics = automaton.computeStatistics();
-			    System.out.println(statistics);
+			    // ONLY FOR DEBUG PURPOSES
+			    automaton.runGUI();
+			    
+			    //automaton.run();
+			    
+			    // Fix mean and median if evacuees less than 2
+			    double meanEvacuationTime = 0;
+	            double medianEvacuationTime = 0;
+	            double meanSteps = 0;
+	            double medianSteps = 0;
+			    int civEvacuated = automaton.evacuationTimes().length;
+			    Statistics statistics = null;
+			    try {
+			        if (civEvacuated >= 2) {
+			            statistics = automaton.computeStatistics();
+			            System.out.println(statistics);
+			            meanEvacuationTime = statistics.meanEvacuationTime();
+			            medianEvacuationTime = statistics.medianEvacuationTime();
+			            meanSteps = statistics.meanSteps();
+			            medianSteps = statistics.medianSteps();
+			        } else if (civEvacuated == 1) {
+			            // If only 1, mean and median are the same
+			            meanEvacuationTime = automaton.evacuationTimes()[0];
+			            medianEvacuationTime = meanEvacuationTime;
+			        }
+			    } catch (Exception e) {
+			        System.out.println("Aviso: Caesium no pudo procesar las estadísticas nativas.");
+			    }
 			    			    
 			    // Our extended metrics
 			    int civDead = 0;
-			    int civEvacuated = statistics.numberOfEvacuees();
 			    int attAlive = 0;
 			    int polAlive = 0;
 			    
@@ -150,19 +173,6 @@ public class ExperimentTester {
 			    }
 			    
 			    int civTrapped = populationConfig.numCivilians() - civEvacuated - civDead;
-			    
-			    // Fix mean and median if evacuees less than 2
-			    double meanEvacuationTime = statistics.meanEvacuationTime();
-			    double meanSteps = statistics.meanSteps();
-			    double medianEvacuationTime = 0;
-			    double medianSteps = 0;
-			    if(civEvacuated >= 2) {
-			    	medianEvacuationTime = statistics.medianEvacuationTime();
-				    medianSteps = statistics.medianSteps();
-			    } else {
-			    	medianEvacuationTime = meanEvacuationTime;
-				    medianSteps = meanSteps;
-			    }
 			    
 			    // Write statistics to csv file
 			    w.println(idExperiment + "," +
@@ -195,6 +205,32 @@ public class ExperimentTester {
 			      e.printStackTrace();
 			    }
 			    
+			    // We identify the roles of each Pedestrian
+			    JsonObject rolesJson = new JsonObject();
+
+			    for (Pedestrian p : crowd) {
+			        String rol = "Unknown";
+			        if (p instanceof Civilian) {
+			            rol = "Civilian";
+			        } else if (p instanceof Attacker) {
+			            rol = "Attacker";
+			        } else if (p instanceof Police) {
+			            rol = "Police";
+			        }
+			        
+			        rolesJson.put(String.valueOf(p.getIdentifier()), rol); 
+			    }
+
+			    String rolesFileName = "data/traces/roles_experiment_" + idExperiment + ".json";
+
+			    try (FileWriter rolesWriter = new FileWriter(rolesFileName)) {
+			        rolesWriter.write(Jsoner.prettyPrint(rolesJson.toJson()));
+			        rolesWriter.flush();
+			        System.out.printf("Roles written to file %s successfully.%n", rolesFileName);
+			    } catch (IOException e) {
+			        e.printStackTrace();
+			    }
+			    
 			}
 		}
 		catch(Exception e) {
@@ -202,6 +238,10 @@ public class ExperimentTester {
 		}
 
 	}
+	
+	// Distancia puertas, atacantes y policias para optimizar civiles
+	// Para atacantes optimizar distancia de civiles y numero de civiles derribados????
+	// Para policias optimizar distancia civiles y numero de atacantes derribados???
 	
 	/**
 	   * Creates a permanent sign on the center of the exit rectangle, 
