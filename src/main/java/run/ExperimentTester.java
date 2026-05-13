@@ -120,9 +120,9 @@ public class ExperimentTester {
 			    System.out.println("Simulating...");
 			    
 			    // ONLY FOR DEBUG PURPOSES
-			    automaton.runGUI();
+			    //automaton.runGUI();
 			    
-			    //automaton.run();
+			    automaton.run();
 			    
 			    // Fix mean and median if evacuees less than 2
 			    double meanEvacuationTime = 0;
@@ -150,8 +150,11 @@ public class ExperimentTester {
 			    			    
 			    // Our extended metrics
 			    int civDead = 0;
-			    int attAlive = 0;
-			    int polAlive = 0;
+			    
+			    // Lists to store Pedestrians for calculating distances for optimization
+			    List<Civilian> civList = new ArrayList<Civilian>();
+			    List<Attacker> attList = new ArrayList<Attacker>();
+			    List<Police> polList = new ArrayList<Police>();
 			    
 			    // Count types of pedestrians
 			    for(Pedestrian p : crowd) {
@@ -159,20 +162,27 @@ public class ExperimentTester {
 			    		if(!((Civilian) p).isAlive()) {
 			    			civDead++;
 			    		}
+			    		else { // Pedestrians alive
+			    			if(!automaton.getScenario().isExit(p.getLocation())){
+			    				civList.add((Civilian) p);
+			    			}
+			    		}
 			    	}
 			    	else if (p instanceof Attacker) {
 			    		if(((Attacker) p).isAlive()) {
-			    			attAlive++;
+			    			attList.add((Attacker) p);
 			    		}
 			    	}
 			    	else if (p instanceof Police) {
 			    		if(((Police) p).isAlive()) {
-			    			polAlive++;
+			    			polList.add((Police) p);
 			    		}
 			    	}
 			    }
 			    
-			    int civTrapped = populationConfig.numCivilians() - civEvacuated - civDead;
+			    int attAlive = attList.size();
+			    int polAlive = polList.size();
+			    int civTrapped = civList.size();
 			    
 			    // Write statistics to csv file
 			    w.println(idExperiment + "," +
@@ -261,6 +271,12 @@ public class ExperimentTester {
 	    }
 	  }
 
+	  /**
+	   * Generates the parameter list for Pedestrians
+	   * @param paramJson file with data
+	   * @param PedestrianType adjust parameters to the selected type (0 -> Civ, 1 -> Att, 2 -> Pol)
+	   * @return builder of parameters
+	   */
 	  private static PedestrianWithVisionParameters buildParams(JsonObject paramJson, int PedestrianType) {
 	        double[][] matrix = ExtraJsonParameterLoader.loadSocialWeightsMatrix((JsonArray) paramJson.get("socialMatrix"));
 	        double civilWeight = matrix[PedestrianType][0];

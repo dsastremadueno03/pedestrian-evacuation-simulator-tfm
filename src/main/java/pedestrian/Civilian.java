@@ -16,11 +16,11 @@ import signs.Sign;
 
 public class Civilian extends PedestrianWithVision {
 
-	private final Age ageGroup;
+	protected final Age ageGroup;
 	
-	private boolean permanentExitKnown; // Knows exit map always
+	protected boolean permanentExitKnown; // Knows exit map always
 	
-	private boolean temporalExitKnown; // Knows exit map right now
+	protected boolean temporalExitKnown; // Knows exit map right now 
 
 		public Civilian(int row, int column, PedestrianWithVisionParameters parameters, CellularAutomaton automaton, Age ageGroup){
 			super(row, column, parameters, automaton);
