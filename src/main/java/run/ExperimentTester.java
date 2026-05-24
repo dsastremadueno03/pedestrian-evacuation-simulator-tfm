@@ -24,6 +24,7 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
 import pedestrian.MultiPedestrianFactory;
@@ -163,7 +164,7 @@ public class ExperimentTester {
 			    			civDead++;
 			    		}
 			    		else { // Pedestrians alive
-			    			if(!automaton.getScenario().isExit(p.getLocation())){
+			    			if(!automaton.getScenario().isExit(p.getLocation())){ // Pedestrians trapped
 			    				civList.add((Civilian) p);
 			    			}
 			    		}
@@ -183,6 +184,55 @@ public class ExperimentTester {
 			    int attAlive = attList.size();
 			    int polAlive = polList.size();
 			    int civTrapped = civList.size();
+			    
+			    // Distance calculation for trapped civilians (used in EA)
+			    double distToExit = 0;
+			    double distToAtt = 0;
+			    double distToPol = 0;
+			    
+			    if(!civList.isEmpty()) {
+			    	for(Civilian c : civList) {
+			    		
+			    		// Distance to closest exit
+			    		double minDistToExit = Double.MAX_VALUE;
+			    		for(Rectangle exit : scenario.exits()) {
+			    			int centerRow = exit.bottom() + (exit.height() / 2);
+			                int centerCol = exit.left() + (exit.width() / 2);
+			    			double dist = automaton.getDistance(c.getRow(), c.getColumn(), centerRow, centerCol);
+			    			if(dist < minDistToExit) {
+			    				minDistToExit = dist;
+			    			}
+			    		}
+			    		distToExit += minDistToExit;
+			    		
+			    		// Distance to attacker
+			    		if(!attList.isEmpty()) {
+			    		double minDistToAtt = Double.MAX_VALUE;
+			    		for(Attacker att : attList) {
+			    			double dist = automaton.getDistance(c.getLocation(), att.getLocation());
+			    			if(dist < minDistToAtt) {
+			    				minDistToAtt = dist;
+			    			}
+			    		}
+			    		distToAtt += minDistToAtt;
+			    		
+			    		}
+			    		
+			    		// Distance to attacker
+			    		if(!polList.isEmpty()) {
+			    		double minDistToPol = Double.MAX_VALUE;
+			    		for(Police pol : polList) {
+			    			double dist = automaton.getDistance(c.getLocation(), pol.getLocation());
+			    			if(dist < minDistToPol) {
+			    				minDistToPol = dist;
+			    			}
+			    		}
+			    		distToPol += minDistToPol;
+			    		
+			    		}
+			    	}
+			    }
+			    
 			    
 			    // Write statistics to csv file
 			    w.println(idExperiment + "," +
