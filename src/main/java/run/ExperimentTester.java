@@ -233,6 +233,17 @@ public class ExperimentTester {
 			    	}
 			    }
 			    
+			    // Average distances to use in optimization
+			    if(civList.isEmpty()) {
+				    double avgDistToExit = 0;
+				    double avgDistToAtt = 0;
+				    double avgDistToPol = 0;
+			    } 
+			    else {
+			    double avgDistToExit = distToExit / civTrapped;
+			    double avgDistToAtt = distToAtt / civTrapped;
+			    double avgDistToPol = distToPol / civTrapped;
+			    }
 			    
 			    // Write statistics to csv file
 			    w.println(idExperiment + "," +
