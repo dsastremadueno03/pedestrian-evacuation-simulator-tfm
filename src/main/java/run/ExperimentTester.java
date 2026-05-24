@@ -43,7 +43,7 @@ public class ExperimentTester {
 		
 		try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
 			// Header
-			w.println("Experiment id,Civilians Evacuated,Civilians Killed,Civilians Trapped,Attackers Alive,Police Alive,Mean Time,Median Time,Mean Steps,Median Steps");
+			w.println("Experiment id,Civilians Evacuated,Civilians Killed,Civilians Trapped,Attackers Alive,Police Alive,Mean Time,Median Time,Mean Steps,Median Steps,Avg.Dist.Exit,Avg.Dist.Attaker,Avg.Dist.Police");
 			
 			// Read JSON
 			FileReader r = new FileReader("data/experiments.json");
@@ -189,6 +189,9 @@ public class ExperimentTester {
 			    double distToExit = 0;
 			    double distToAtt = 0;
 			    double distToPol = 0;
+			    double avgDistToExit = 0;
+			    double avgDistToAtt = 0;
+			    double avgDistToPol = 0;
 			    
 			    if(!civList.isEmpty()) {
 			    	for(Civilian c : civList) {
@@ -234,15 +237,10 @@ public class ExperimentTester {
 			    }
 			    
 			    // Average distances to use in optimization
-			    if(civList.isEmpty()) {
-				    double avgDistToExit = 0;
-				    double avgDistToAtt = 0;
-				    double avgDistToPol = 0;
-			    } 
-			    else {
-			    double avgDistToExit = distToExit / civTrapped;
-			    double avgDistToAtt = distToAtt / civTrapped;
-			    double avgDistToPol = distToPol / civTrapped;
+			    if(!civList.isEmpty()) {
+				    avgDistToExit = distToExit / civTrapped;
+				    avgDistToAtt = distToAtt / civTrapped;
+				    avgDistToPol = distToPol / civTrapped;
 			    }
 			    
 			    // Write statistics to csv file
@@ -255,7 +253,10 @@ public class ExperimentTester {
 			    		meanEvacuationTime + "," +
 			    		medianEvacuationTime + "," +
 			    		meanSteps + "," +
-			    		medianSteps);
+			    		medianSteps + "," +
+			    		avgDistToExit + "," +
+			    		avgDistToAtt + "," +
+			    		avgDistToPol);
 			    
 			    w.flush();
 
