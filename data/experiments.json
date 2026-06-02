@@ -6,6 +6,11 @@
         "numCivilians": 10, "numAttackers": 0, "numPolice": 0,
         "pChild": 0.1, "pAdult": 0.8, "pElder": 0.1
       },
+	  "environment": {
+		"nExits": 3, 
+		"nPermSigns": 3,
+		"nTempSigns": 5
+	  },
       "weights": {
         "socialMatrix": [
           [ {"min": 1.0, "max": 1.0}, {"min": -10.0, "max": -10.0}, {"min": 10.0, "max": 10.0} ],
@@ -24,6 +29,11 @@
         "numCivilians": 10, "numAttackers": 10, "numPolice": 0,
         "pChild": 0.1, "pAdult": 0.8, "pElder": 0.1
       },
+	  "environment": {
+	  		"nExits": 3, 
+	  		"nPermSigns": 3,
+	  		"nTempSigns": 5
+	  },
       "weights": {
         "socialMatrix": [
           [ {"min": 1.0, "max": 1.0}, {"min": -10.0, "max": -10.0}, {"min": 10.0, "max": 10.0} ],

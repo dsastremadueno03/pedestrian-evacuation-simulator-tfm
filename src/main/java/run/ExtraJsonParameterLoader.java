@@ -10,6 +10,7 @@ import pedestrian.PopulationConfig;
 public class ExtraJsonParameterLoader {
 	
 	public static final int PEDESTRIAN_TYPES = 3;
+	public static final int ENVIRONMENT_COMPONENTS = 3; // Temporal signs, permanent signs, exits
 
 	/**
 	 * Reads the JSON object's minimum and maximum.
@@ -30,6 +31,21 @@ public class ExtraJsonParameterLoader {
 		}
 		
 		return Random.random.nextDouble(min, max);
+	}
+	
+	public static int[] loadEnvironment(JsonObject environment) {
+		if(environment == null) {
+			System.err.println("Error en el JsonArray!");
+			return null;
+		}
+		
+		int[] env = new int[ENVIRONMENT_COMPONENTS];
+		
+		env[0] = JsonUtil.getInt(environment, "nExits"); // Check whether adding an extra exit is worth it or not
+		env[1] = JsonUtil.getInt(environment, "nPermSigns");
+		env[2] = JsonUtil.getInt(environment, "nTempSigns");
+		
+		return env;
 	}
 	
 	/**

@@ -24,7 +24,6 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
 import pedestrian.MultiPedestrianFactory;
@@ -58,6 +57,8 @@ public class ExperimentTester {
 				JsonObject populationJson = (JsonObject) experiment.get("population");
 				PopulationConfig populationConfig = ExtraJsonParameterLoader.loadPopulationConfig(populationJson);
 				JsonObject weightJson = (JsonObject) experiment.get("weights");
+				JsonObject environmentData = (JsonObject) experiment.get("environment");
+				int[] environmentNumbers = ExtraJsonParameterLoader.loadEnvironment(environmentData); // 0 -> nExits, 1 -> permSigns, 2 -> tempSigns
 				
 				// Initialization
 				random.setSeed();
