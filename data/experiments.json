@@ -1,5 +1,6 @@
 {
-  "experiments": [
+	"map": "data/environments/environment-example-supermarket.json",
+  	"experiments": [
     {
       "id": 1,
       "population": {

@@ -18,12 +18,15 @@ import es.uma.lcc.caesium.ea.util.JsonUtil;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.Statistics;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.floorField.DijkstraStaticFloorFieldWithMooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
 import pedestrian.MultiPedestrianFactory;
@@ -48,6 +51,7 @@ public class ExperimentTester {
 			FileReader r = new FileReader("data/experiments.json");
 			JsonObject jsonMain = (JsonObject) Jsoner.deserialize(r);
 			JsonArray listOfExperiments = (JsonArray) jsonMain.get("experiments");
+			String mapPath = jsonMain.get("map").toString();
 			
 			for(var obj : listOfExperiments) {
 				JsonObject experiment = (JsonObject) obj;
@@ -62,8 +66,18 @@ public class ExperimentTester {
 				
 				// Initialization
 				random.setSeed();
+				
+				// Scenario from json
+				Environment environment = Environment.fromFile(mapPath);
+			    Domain domain = environment.getDomain(1);
 
-			    var scenario = random.bernoulli(0.75) ? RandomScenario.randomScenario() : Supermarket.supermarket();
+			    Scenario scenario = new Scenario.FromDomainBuilder(domain)
+			        .cellDimension(domain.getWidth() / 110)
+			        .floorField(DijkstraStaticFloorFieldWithMooreNeighbourhood::of)
+			        .build();
+
+			    // Default Scenarios from classes
+			    //var scenario = random.bernoulli(0.75) ? RandomScenario.randomScenario() : Supermarket.supermarket();
 
 			    var cellularAutomatonParameters =
 			        new CellularAutomatonParameters.Builder()
@@ -122,9 +136,9 @@ public class ExperimentTester {
 			    System.out.println("Simulating...");
 			    
 			    // ONLY FOR DEBUG PURPOSES
-			    //automaton.runGUI();
+			    automaton.runGUI();
 			    
-			    automaton.run();
+			    //automaton.run();
 			    
 			    // Fix mean and median if evacuees less than 2
 			    double meanEvacuationTime = 0;
