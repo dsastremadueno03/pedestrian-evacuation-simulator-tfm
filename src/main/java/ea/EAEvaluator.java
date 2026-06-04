@@ -3,6 +3,7 @@ package ea;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.cliftonlabs.json_simple.JsonArray;
 import com.github.cliftonlabs.json_simple.JsonObject;
 
 import es.uma.lcc.caesium.ea.base.Genotype;
@@ -13,14 +14,24 @@ import es.uma.lcc.caesium.pedestrian.evacuation.optimization.Double2AccessDecode
 import es.uma.lcc.caesium.pedestrian.evacuation.optimization.ExitEvacuationProblem;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.Statistics;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.floorField.DijkstraStaticFloorFieldWithMooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
+import pedestrian.Attacker;
+import pedestrian.Civilian;
+import pedestrian.MultiPedestrianFactory;
+import pedestrian.PedestrianWithVisionParameters;
+import pedestrian.Police;
 import pedestrian.PopulationConfig;
+import pedestrian.PopulationGenerator;
 import run.ExperimentTester;
+import run.ExtraJsonParameterLoader;
 import signs.EphimeralVisualSign;
 import signs.EvacuationPlanSign;
 
@@ -160,7 +171,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    var automaton = new SpecificCellularAutomaton(cellularAutomatonParameters);
 	    
 	    // Generate signs on exits
-	    ExperimentTester.GenerateSignOnExits(scenario, automaton);
+	    GenerateSignOnExits(scenario, automaton);
 	    
 	    // Other signs
 	    for(EphimeralVisualSign s : trialTempVisSigns) {
@@ -169,8 +180,225 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    for(EvacuationPlanSign s : trialPermVisSigns) {
 	    	automaton.addSign(s);
 	    }
+	    
+	    
+	    // POPULATION
+	    List<PedestrianWithVisionParameters> civParams = new ArrayList<>();
+	    for (int j = 0; j < populationConfig.numCivilians(); j++) {
+	        civParams.add(buildParams(weightJson, 0));
+	    }
+
+	    List<PedestrianWithVisionParameters> attParams = new ArrayList<>();
+	    for (int j = 0; j < populationConfig.numAttackers(); j++) {
+	        attParams.add(buildParams(weightJson, 1));
+	    }
+
+	    List<PedestrianWithVisionParameters> polParams = new ArrayList<>();
+	    for (int j = 0; j < populationConfig.numPolice(); j++) {
+	        polParams.add(buildParams(weightJson, 2));
+	    }
+	    
+	    // Create factory and set generator
+	    MultiPedestrianFactory factory = automaton.getPedestrianFactory();
+	    PopulationGenerator generator = new PopulationGenerator(factory, automaton);
+		
+	    // Set in automaton
+	    List<Pedestrian> crowd = generator.generatePopulation(populationConfig, civParams, attParams, polParams);
+	    int policeCount = 0;
+	    for(Pedestrian p : crowd) {
+	    	// Placing police following EA
+	        if(p instanceof Police && policeCount < trialPolice.size()) {
+	        	int[] coorPolice = trialPolice.get(policeCount);
+	        	policeCount++;
+	        	((Police)p).setRow(coorPolice[0]);
+	        	((Police)p).setCol(coorPolice[1]);
+	        }
+	        automaton.addPedestrian(p);
+	    }
+	    
+	    
+	    // SIMULATION
+	    automaton.calculateVisibilityMap();
+	    automaton.calculateDistanceMap();
+
+	    //System.out.println("Simulating...");
+	    
+	    // ONLY FOR DEBUG PURPOSES
+	    //automaton.runGUI();
+	    
+	    automaton.run();
+	    
+	    
+	    // METRICS
+	    
+	    // Fix mean and median if evacuees less than 2
+	    double meanEvacuationTime = 0;
+        double medianEvacuationTime = 0;
+        double meanSteps = 0;
+        double medianSteps = 0;
+	    int civEvacuated = automaton.evacuationTimes().length;
+	    Statistics statistics = null;
+	    try {
+	        if (civEvacuated >= 2) {
+	            statistics = automaton.computeStatistics();
+	            System.out.println(statistics);
+	            meanEvacuationTime = statistics.meanEvacuationTime();
+	            medianEvacuationTime = statistics.medianEvacuationTime();
+	            meanSteps = statistics.meanSteps();
+	            medianSteps = statistics.medianSteps();
+	        } else if (civEvacuated == 1) {
+	            // If only 1, mean and median are the same
+	            meanEvacuationTime = automaton.evacuationTimes()[0];
+	            medianEvacuationTime = meanEvacuationTime;
+	        }
+	    } catch (Exception e) {
+	        System.out.println("Aviso: Caesium no pudo procesar las estadísticas nativas.");
+	    }
+	    			    
+	    // Our extended metrics
+	    int civDead = 0;
+	    
+	    // Lists to store Pedestrians for calculating distances for optimization
+	    List<Civilian> civList = new ArrayList<Civilian>();
+	    List<Attacker> attList = new ArrayList<Attacker>();
+	    List<Police> polList = new ArrayList<Police>();
+	    
+	    // Count types of pedestrians
+	    for(Pedestrian p : crowd) {
+	    	if(p instanceof Civilian) {
+	    		if(!((Civilian) p).isAlive()) {
+	    			civDead++;
+	    		}
+	    		else { // Pedestrians alive
+	    			if(!automaton.getScenario().isExit(p.getLocation())){ // Pedestrians trapped
+	    				civList.add((Civilian) p);
+	    			}
+	    		}
+	    	}
+	    	else if (p instanceof Attacker) {
+	    		if(((Attacker) p).isAlive()) {
+	    			attList.add((Attacker) p);
+	    		}
+	    	}
+	    	else if (p instanceof Police) {
+	    		if(((Police) p).isAlive()) {
+	    			polList.add((Police) p);
+	    		}
+	    	}
+	    }
+	    
+	    int attAlive = attList.size();
+	    int polAlive = polList.size();
+	    int civTrapped = civList.size();
+	    
+	    // Distance calculation for trapped civilians (used in EA)
+	    double distToExit = 0;
+	    double distToAtt = 0;
+	    double distToPol = 0;
+	    double avgDistToExit = 0;
+	    double avgDistToAtt = 0;
+	    double avgDistToPol = 0;
+	    
+	    if(!civList.isEmpty()) {
+	    	for(Civilian c : civList) {
+	    		
+	    		// Distance to closest exit
+	    		double minDistToExit = Double.MAX_VALUE;
+	    		for(Rectangle exit : scenario.exits()) {
+	    			int centerRow = exit.bottom() + (exit.height() / 2);
+	                int centerCol = exit.left() + (exit.width() / 2);
+	    			double dist = automaton.getDistance(c.getRow(), c.getColumn(), centerRow, centerCol);
+	    			if(dist < minDistToExit) {
+	    				minDistToExit = dist;
+	    			}
+	    		}
+	    		distToExit += minDistToExit;
+	    		
+	    		// Distance to attacker
+	    		if(!attList.isEmpty()) {
+	    		double minDistToAtt = Double.MAX_VALUE;
+	    		for(Attacker att : attList) {
+	    			double dist = automaton.getDistance(c.getLocation(), att.getLocation());
+	    			if(dist < minDistToAtt) {
+	    				minDistToAtt = dist;
+	    			}
+	    		}
+	    		distToAtt += minDistToAtt;
+	    		
+	    		}
+	    		
+	    		// Distance to attacker
+	    		if(!polList.isEmpty()) {
+	    		double minDistToPol = Double.MAX_VALUE;
+	    		for(Police pol : polList) {
+	    			double dist = automaton.getDistance(c.getLocation(), pol.getLocation());
+	    			if(dist < minDistToPol) {
+	    				minDistToPol = dist;
+	    			}
+	    		}
+	    		distToPol += minDistToPol;
+	    		
+	    		}
+	    	}
+	    }
+	    
+	    // Average distances to use in optimization
+	    if(!civList.isEmpty()) {
+		    avgDistToExit = distToExit / civTrapped;
+		    avgDistToAtt = distToAtt / civTrapped;
+		    avgDistToPol = distToPol / civTrapped;
+	    }
+	    
+	    
 
 		return 0;
 	}
 	
+	
+	
+	/**
+	   * Creates a permanent sign on the center of the exit rectangle, 
+	   * so that pedestrians are attracted.
+	   * 
+	   * @param scenario scenario built
+	   * @param automaton automaton used
+	   */
+	  private static void GenerateSignOnExits(Scenario scenario, SpecificCellularAutomaton automaton) {
+		System.out.println("Generating permanent signs on exits...");
+	    for(Rectangle exit : scenario.exits()) {
+	    	int centerRow = exit.bottom() + (exit.height() / 2);
+	    	int centerCol = exit.left() + (exit.width() / 2);
+	    	EvacuationPlanSign exitSign = new EvacuationPlanSign(centerRow, centerCol);
+	    	automaton.addSign(exitSign);
+	    	System.out.println("Exit Sign generated at (" + centerRow + ", " + centerCol + ").");
+	    }
+	  }
+
+	  /**
+	   * Generates the parameter list for Pedestrians
+	   * @param paramJson file with data
+	   * @param PedestrianType adjust parameters to the selected type (0 -> Civ, 1 -> Att, 2 -> Pol)
+	   * @return builder of parameters
+	   */
+	  private static PedestrianWithVisionParameters buildParams(JsonObject paramJson, int PedestrianType) {
+	        double[][] matrix = ExtraJsonParameterLoader.loadSocialWeightsMatrix((JsonArray) paramJson.get("socialMatrix"));
+	        double civilWeight = matrix[PedestrianType][0];
+	        double attackerWeight = matrix[PedestrianType][1];
+	        double policeWeight = matrix[PedestrianType][2];
+
+	        double vision = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("visionRadius"));
+	        double attack = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("attackRadius"));
+	        double greedy = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("greedyProb"));
+	        double inertia = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("inertiaWeight"));
+
+	        return new PedestrianWithVisionParameters.Builder()
+	            .civilianWeight(civilWeight)
+	            .attackerWeight(attackerWeight)
+	            .policeWeight(policeWeight)
+	            .visionRadius(vision)
+	            .attackRadius(attack)
+	            .greedyProb(greedy)
+	            .inertiaWeight(inertia)
+	            .build();
+	    }
 }

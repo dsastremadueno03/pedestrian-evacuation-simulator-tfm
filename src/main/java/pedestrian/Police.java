@@ -18,7 +18,15 @@ public class Police extends PedestrianWithVision {
 	public Police(int row, int column, PedestrianWithVisionParameters parameters, CellularAutomaton automaton){
 		super(row, column, parameters, automaton);
 	}
+	
+	public void setRow(int row) {
+		this.row = row;
+	}
 
+	public void setCol(int col) {
+		this.column = col;
+	}
+	
 	public boolean attack() {
 		SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
 		

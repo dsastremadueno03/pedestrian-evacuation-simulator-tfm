@@ -330,6 +330,7 @@ public class ExperimentTester {
 	// Para atacantes optimizar distancia de civiles y numero de civiles derribados????
 	// Para policias optimizar distancia civiles y numero de atacantes derribados???
 	
+	// TODO: QUITAR ESTAS FUNCIONES DE AQUÍ
 	/**
 	   * Creates a permanent sign on the center of the exit rectangle, 
 	   * so that pedestrians are attracted.
