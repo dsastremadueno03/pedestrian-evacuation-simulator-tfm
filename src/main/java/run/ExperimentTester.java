@@ -82,7 +82,7 @@ public class ExperimentTester {
 			    var cellularAutomatonParameters =
 			        new CellularAutomatonParameters.Builder()
 			            .scenario(scenario) // use this scenario
-			            .timeLimit(10 * 60) // 10 minutes is time limit for simulation
+			            .timeLimit(2 * 60) // 2 minutes is time limit for simulation
 			            .neighbourhood(MooreNeighbourhood::of) // use Moore's Neighbourhood for automaton
 			            .pedestrianReferenceVelocity(1.3) // fastest pedestrians walk at 1.3 m/s
 			            .GUITimeFactor(8) // perform GUI animation x8 times faster than real time

@@ -37,6 +37,8 @@ import signs.EvacuationPlanSign;
 
 public class EAEvaluator extends ContinuousObjectiveFunction{
 	
+	private final double MAX_SIMULATION_TIME = 60 * 2; // 2 min
+	
 	private ExitEvacuationProblem eep;
 	private Double2AccessDecoder decoder;
 	private Domain domain;
@@ -350,8 +352,45 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    }
 	    
 	    
+	    // FITNESS
+	    // Follows cascaded model
+	    
+	    // Limit values
+	    double maxDiameter = eep.getDiameter();
+	    double totalCivilians = populationConfig.numCivilians();
+	    
+	    double fitness = 0;
+	    
+	    // Time
+	    double time = 0;
+	    try {
+	    time = meanEvacuationTime / MAX_SIMULATION_TIME;
+	    } catch(Exception e)
+	    {
+	    	
+	    }
+	    
+	    fitness = time;
+	    
+	    // Distance to closest exit
+	    double dist = 0;
+	    try {
+	    dist = avgDistToExit / maxDiameter;
+	    } catch(Exception e)
+	    {
 
-		return 0;
+	    }
+	    // Divided by 2 to ensure it never reaches 1
+	    fitness = (dist + (fitness * 0.99)) / 2.0;
+	    
+	    // Civilians trapped
+	    // Divided by totalCivilians + 1 so it never reaches 1
+	    fitness = (civTrapped + (fitness * 0.99)) / (totalCivilians + 1);
+	    
+	    // Civilians killed
+	    fitness = civDead + fitness;
+
+		return fitness;
 	}
 	
 	
