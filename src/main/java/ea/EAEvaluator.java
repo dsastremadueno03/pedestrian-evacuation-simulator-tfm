@@ -54,6 +54,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	private int mapWidth;
 	private int mapHeight;
 	
+	private Scenario scenarioToSave;
+	private List<Pedestrian> crowdToSave;
+	private SpecificCellularAutomaton automatonToSave;
+	
 	// Objective function
 	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson){
 		// Number of genes
@@ -77,6 +81,19 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	public OptimizationSense getOptimizationSense() {
 		return OptimizationSense.MINIMIZATION;
 	}
+	
+	public Scenario getScenarioToSave() {
+		return scenarioToSave;
+	}
+	
+	public List<Pedestrian> getCrowdToSave() {
+		return crowdToSave;
+	}
+	
+	public SpecificCellularAutomaton getAutomatonToSave() {
+		return automatonToSave;
+	}
+	
 	
 	@Override
 	protected double _evaluate(Individual i) {
@@ -350,6 +367,11 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		    avgDistToAtt = distToAtt / civTrapped;
 		    avgDistToPol = distToPol / civTrapped;
 	    }
+	    
+	    // DATA TO SAVE
+	    this.automatonToSave = automaton;
+	    this.crowdToSave = crowd;
+	    this.scenarioToSave = scenario;
 	    
 	    
 	    // FITNESS
