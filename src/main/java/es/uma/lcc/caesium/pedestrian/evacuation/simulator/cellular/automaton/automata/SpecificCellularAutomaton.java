@@ -19,11 +19,11 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 	
 	// Matrix variables for static map
 	private static boolean[][][][] visibilityMatrix;
-	private boolean visibilityCalculated = false;
+	private static boolean visibilityCalculated = false;
 	
 	// Matrix for distance map
 	private static double[][] distanceMatrix;
-	private boolean distanceCalculated = false;
+	private static boolean distanceCalculated = false;
 	
 	private List<Sign> signs = new ArrayList<>(); 
 	
