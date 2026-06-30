@@ -122,6 +122,12 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		
 	}
 	
+	public record SimulationResult(
+			SpecificCellularAutomaton automaton,
+			List<Pedestrian> crowd,
+			SimulationMetrics metrics
+			) {}
+	
 	/**
 	 * Decodes an individual from its genome
 	 * @param i Individual to be decoded
@@ -418,16 +424,6 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	}
 	
 	/**
-	 * Saves the state of a specific simulation
-	 * @param automaton simulation data 
-	 * @param crowd list of entities in the simulation
-	 */
-	protected void saveSimulationState(SpecificCellularAutomaton automaton, List<Pedestrian> crowd) {
-		this.automatonToSave = automaton;
-	    this.crowdToSave = crowd;
-	}
-	
-	/**
 	 * Calculates fitness based on metrics of an individual following a cascaded fitness calculation
 	 * @return
 	 */
@@ -470,7 +466,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		return fitness;
 	}
 	
-	
+	/**
+	 * This is the main function of the EA. It manages via other functions all the individual's data
+	 * and returns the fitness value.
+	 */
 	@Override
 	protected double _evaluate(Individual i) {
 		// 1. Decode individual
@@ -485,17 +484,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    // 4. Calculates precalculated maps and runs simulation
 	    simulate(automaton);
 	    
-	    // METRICS
+	    // 5. Get metrics from individual
 	    SimulationMetrics metrics = getMetrics(automaton, crowd);
 	    
-	    
-	    // DATA TO SAVE
-	    // UNNECESSARY HERE
-	    // DEBUGGING
-	    //saveSimulationState(automaton, crowd);
-	    
-	    
-	    // FITNESS
+	    // 6. Calculate fitness
 	    return getFitness(metrics);
 	}
 	
@@ -544,4 +536,13 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	            .inertiaWeight(inertia)
 	            .build();
 	    }
+	  
+	  public SimulationResult getSimulation(Individual i) {
+		  DecodedDesign dd = decode(i);
+		  SpecificCellularAutomaton automaton = setAutomaton(dd);
+		  List<Pedestrian> crowd = setCrowd(dd, automaton);
+		  simulate(automaton);
+		  SimulationMetrics metrics = getMetrics(automaton, crowd);
+		  return new SimulationResult(automaton, crowd, metrics);
+	  }
 }
