@@ -15,6 +15,7 @@ import com.github.cliftonlabs.json_simple.JsonObject;
 import com.github.cliftonlabs.json_simple.Jsoner;
 
 import ea.EAEvaluator;
+import ea.EAEvaluator.SimulationResult;
 import es.uma.lcc.caesium.ea.base.EvolutionaryAlgorithm;
 import es.uma.lcc.caesium.ea.base.Individual;
 import es.uma.lcc.caesium.ea.config.EAConfiguration;
@@ -59,6 +60,7 @@ public class ExperimentTester {
 			JsonArray listOfExperiments = (JsonArray) jsonMain.get("experiments");
 			String mapPath = jsonMain.get("map").toString();
 			
+			// Experiment
 			for(var obj : listOfExperiments) {
 				JsonObject experiment = (JsonObject) obj;
 				int idExperiment = JsonUtil.getInt(experiment, "id");
@@ -71,7 +73,7 @@ public class ExperimentTester {
 				int[] environmentNumbers = ExtraJsonParameterLoader.loadEnvironment(environmentData); // 0 -> nExits, 1 -> permSigns, 2 -> tempSigns
 				
 				// Initialization
-				random.setSeed();
+				random.setSeed(JsonUtil.getInt(experiment, "seed"));
 				
 				// Scenario from json
 				Environment environment = Environment.fromFile(mapPath);
@@ -81,14 +83,21 @@ public class ExperimentTester {
 			    
 			    EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson);
 			    
-			    //TODO: Assign path to ea config file
-			    FileReader reader = new FileReader("");
+			    FileReader reader = new FileReader("data/numeric.json");
 				EAConfiguration conf = new EAConfiguration((JsonObject) Jsoner.deserialize(reader));
 			    EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
 			    ea.setObjectiveFunction(evaluator);
-			    ea.run();
-			    Individual best = ea.getStatistics().getCurrentBest();
-			    evaluator.evaluate(best); // Gets best individual's information
+			    
+			    // num_runs loop
+			    for(int i = 0; i < conf.getNumRuns(); i++) {
+			    	long thisSeed = conf.getSeed() + i;
+			    	ea.run(thisSeed);
+			    }
+			    
+			    
+			    Individual best = ea.getStatistics().getBest();
+			    
+			    SimulationResult result = evaluator.getSimulation(best);
 				
 			    saveData(w, idExperiment, evaluator.getAutomatonToSave(), evaluator.getCrowdToSave(), evaluator.getScenarioToSave());
 			   
