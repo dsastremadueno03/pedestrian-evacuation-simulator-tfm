@@ -18,11 +18,11 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 	private final MultiPedestrianFactory myFactory;
 	
 	// Matrix variables for static map
-	private boolean[][][][] visibilityMatrix;
+	private static boolean[][][][] visibilityMatrix;
 	private boolean visibilityCalculated = false;
 	
 	// Matrix for distance map
-	private double[][] distanceMatrix;
+	private static double[][] distanceMatrix;
 	private boolean distanceCalculated = false;
 	
 	private List<Sign> signs = new ArrayList<>(); 
@@ -132,10 +132,16 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 	 * Calculates static visibility map
 	 */
 	public void calculateVisibilityMap() {
+		
+		// We only calculate it once
+		if(visibilityCalculated) {
+			return;
+		}
+		
 		int rows = getRows();
 		int cols = getColumns();
 		
-		System.out.println("Calculating static visibility map...");
+		//System.out.println("Calculating static visibility map...");
 		
 		long start = System.currentTimeMillis();
 		
@@ -159,24 +165,28 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 					}
 				}
 			}
-			System.out.println("Calculating visibility map, please wait... (" + (Math.round((r0/(rows * 1.0)) * 100)) + "%)");
+			//System.out.println("Calculating visibility map, please wait... (" + (Math.round((r0/(rows * 1.0)) * 100)) + "%)");
 		}
 		visibilityCalculated = true;
 		long end = System.currentTimeMillis();
-		System.out.println("Visibility map calculated in " + (end-start) + "ms.");
+		//System.out.println("Visibility map calculated in " + (end-start) + "ms.");
 		
 	}
 	
 	/**
-	 * TO BE USED IN MAIN
-	 * 
 	 * Calculate distances between two cells in advance
 	 */
 	public void calculateDistanceMap() {
+		
+		// We only calculate it once
+		if(distanceCalculated) {
+			return;
+		}
+		
 		int rows = getRows();
 		int cols = getColumns();
 		
-		System.out.println("Calculating static distance map...");
+		//System.out.println("Calculating static distance map...");
 		
 		long start = System.currentTimeMillis();
 		
@@ -190,7 +200,7 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		
 		distanceCalculated = true;
 		long end = System.currentTimeMillis();
-		System.out.println("Distance map calculated in " + (end-start) + "ms.");
+		//System.out.println("Distance map calculated in " + (end-start) + "ms.");
 		
 	}
 	
