@@ -94,9 +94,40 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		return automatonToSave;
 	}
 	
+	// Stores lists of coordinates out of decoding
+	private record DecodedDesign(
+		    List<Access> trialExits,
+		    List<EphimeralVisualSign> trialTempVisSigns,
+		    List<EvacuationPlanSign> trialPermVisSigns,
+		    List<int[]> trialPolice
+		) {
+		
+	}
 	
-	@Override
-	protected double _evaluate(Individual i) {
+	// Stores simulation metrics
+	private record SimulationMetrics(
+			double meanEvacuationTime,
+		    double medianEvacuationTime,
+		    double meanSteps,
+		    double medianSteps,
+		    int civEvacuated,
+		    int civDead,
+		    int civTrapped,
+		    int attAlive,
+		    int polAlive,
+		    double avgDistToExit,
+		    double avgDistToAtt,
+		    double avgDistToPol
+		) {
+		
+	}
+	
+	/**
+	 * Decodes an individual from its genome
+	 * @param i Individual to be decoded
+	 * @return record of lists containing exits, signs and police coordinates
+	 */
+	protected DecodedDesign decode(Individual i) {
 		Genotype g = i.getGenome(); // Genes from EA
 		int gene = 0; // Index of gene
 		
@@ -163,46 +194,56 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			trialPolice.add(new int[]{row, col});
 		}
 		
-		
-		// SCENARIO
+		return new DecodedDesign(trialExits, trialTempVisSigns, trialPermVisSigns, trialPolice);
+	}
+	
+	/**
+	 * Generates automaton with its scenario, placing exits and signs. 
+	 * @param dd record of lists that stores coordinates 
+	 * @return automaton set 
+	 */
+	protected SpecificCellularAutomaton setAutomaton(DecodedDesign dd) {
 		// Exit placement
 		var domainAcc = domain.getAccesses();
 		domainAcc.clear();
-		domainAcc.addAll(trialExits);
+		domainAcc.addAll(dd.trialExits);
 
-	    Scenario scenario = new Scenario.FromDomainBuilder(domain)
-	        .cellDimension(domain.getWidth() / 110)
-	        .floorField(DijkstraStaticFloorFieldWithMooreNeighbourhood::of)
-	        .build();
+		Scenario scenario = new Scenario.FromDomainBuilder(domain)
+				.cellDimension(domain.getWidth() / 110)
+			    .floorField(DijkstraStaticFloorFieldWithMooreNeighbourhood::of)
+			    .build();
 
-	    // Default Scenarios from classes
-	    // var scenario = random.bernoulli(0.75) ? RandomScenario.randomScenario() : Supermarket.supermarket();
+		// Default Scenarios from classes
+		// var scenario = random.bernoulli(0.75) ? RandomScenario.randomScenario() : Supermarket.supermarket();
 
-	    var cellularAutomatonParameters =
-	        new CellularAutomatonParameters.Builder()
-	            .scenario(scenario) // use this scenario
-	            .timeLimit(10 * 60) // 10 minutes is time limit for simulation
-	            .neighbourhood(MooreNeighbourhood::of) // use Moore's Neighbourhood for automaton
-	            .pedestrianReferenceVelocity(1.3) // fastest pedestrians walk at 1.3 m/s
-	            .GUITimeFactor(8) // perform GUI animation x8 times faster than real time
-	            .build();
+		var cellularAutomatonParameters =
+				new CellularAutomatonParameters.Builder()
+			            .scenario(scenario) // use this scenario
+			            .timeLimit(2 * 60) // 2 minutes is time limit for simulation
+			            .neighbourhood(MooreNeighbourhood::of) // use Moore's Neighbourhood for automaton
+			            .pedestrianReferenceVelocity(1.3) // fastest pedestrians walk at 1.3 m/s
+			            .GUITimeFactor(8) // perform GUI animation x8 times faster than real time
+			            .build();
 
-	    var automaton = new SpecificCellularAutomaton(cellularAutomatonParameters);
-	    
-	    // Generate signs on exits
-	    GenerateSignOnExits(scenario, automaton);
-	    
-	    // Other signs
-	    for(EphimeralVisualSign s : trialTempVisSigns) {
-	    	automaton.addSign(s);
-	    }
-	    for(EvacuationPlanSign s : trialPermVisSigns) {
-	    	automaton.addSign(s);
-	    }
-	    
-	    
-	    // POPULATION
-	    List<PedestrianWithVisionParameters> civParams = new ArrayList<>();
+		var automaton = new SpecificCellularAutomaton(cellularAutomatonParameters);
+			    
+		// Generate signs on exits
+		GenerateSignOnExits(scenario, automaton);
+			    
+		// Other signs
+		for(EphimeralVisualSign s : dd.trialTempVisSigns) {
+			automaton.addSign(s);
+		}
+		for(EvacuationPlanSign s : dd.trialPermVisSigns) {
+			automaton.addSign(s);
+		}
+		
+		return automaton;
+			    
+	}
+	
+	protected List<Pedestrian> setCrowd(DecodedDesign dd, SpecificCellularAutomaton automaton){
+		List<PedestrianWithVisionParameters> civParams = new ArrayList<>();
 	    for (int j = 0; j < populationConfig.numCivilians(); j++) {
 	        civParams.add(buildParams(weightJson, 0));
 	    }
@@ -226,8 +267,8 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    int policeCount = 0;
 	    for(Pedestrian p : crowd) {
 	    	// Placing police following EA
-	        if(p instanceof Police && policeCount < trialPolice.size()) {
-	        	int[] coorPolice = trialPolice.get(policeCount);
+	        if(p instanceof Police && policeCount < dd.trialPolice.size()) {
+	        	int[] coorPolice = dd.trialPolice.get(policeCount);
 	        	policeCount++;
 	        	((Police)p).setRow(coorPolice[0]);
 	        	((Police)p).setCol(coorPolice[1]);
@@ -235,22 +276,27 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	        automaton.addPedestrian(p);
 	    }
 	    
-	    
-	    // SIMULATION
-	    automaton.calculateVisibilityMap();
+	    return crowd;
+	}
+	
+	/**
+	 * Calculates maps before run and then simulates
+	 * @param automaton
+	 */
+	protected void simulate(SpecificCellularAutomaton automaton) {
+		automaton.calculateVisibilityMap();
 	    automaton.calculateDistanceMap();
 
 	    //System.out.println("Simulating...");
 	    
 	    // ONLY FOR DEBUG PURPOSES
 	    //automaton.runGUI();
-	    
+	    System.out.print("Iteration Completed!");
 	    automaton.run();
-	    
-	    
-	    // METRICS
-	    
-	    // Fix mean and median if evacuees less than 2
+	}
+	
+	protected SimulationMetrics getMetrics(SpecificCellularAutomaton automaton, List<Pedestrian> crowd) {
+		// Fix mean and median if evacuees less than 2
 	    double meanEvacuationTime = 0;
         double medianEvacuationTime = 0;
         double meanSteps = 0;
@@ -323,7 +369,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    		
 	    		// Distance to closest exit
 	    		double minDistToExit = Double.MAX_VALUE;
-	    		for(Rectangle exit : scenario.exits()) {
+	    		for(Rectangle exit : automaton.getScenario().exits()) {
 	    			int centerRow = exit.bottom() + (exit.height() / 2);
 	                int centerCol = exit.left() + (exit.width() / 2);
 	    			double dist = automaton.getDistance(c.getRow(), c.getColumn(), centerRow, centerCol);
@@ -368,15 +414,24 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		    avgDistToPol = distToPol / civTrapped;
 	    }
 	    
-	    // DATA TO SAVE
-	    this.automatonToSave = automaton;
+	     return new SimulationMetrics(meanEvacuationTime, medianEvacuationTime, meanSteps, medianSteps, civEvacuated, civDead, civTrapped, attAlive, polAlive, avgDistToExit, avgDistToAtt, avgDistToPol);
+	}
+	
+	/**
+	 * Saves the state of a specific simulation
+	 * @param automaton simulation data 
+	 * @param crowd list of entities in the simulation
+	 */
+	protected void saveSimulationState(SpecificCellularAutomaton automaton, List<Pedestrian> crowd) {
+		this.automatonToSave = automaton;
 	    this.crowdToSave = crowd;
-	    this.scenarioToSave = scenario;
-	    
-	    
-	    // FITNESS
-	    // Follows cascaded model
-	    
+	}
+	
+	/**
+	 * Calculates fitness based on metrics of an individual following a cascaded fitness calculation
+	 * @return
+	 */
+	protected double getFitness(SimulationMetrics metrics) {
 	    // Limit values
 	    double maxDiameter = eep.getDiameter();
 	    double totalCivilians = populationConfig.numCivilians();
@@ -386,7 +441,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    // Time
 	    double time = 0;
 	    try {
-	    time = meanEvacuationTime / MAX_SIMULATION_TIME;
+	    time = metrics.meanEvacuationTime / MAX_SIMULATION_TIME;
 	    } catch(Exception e)
 	    {
 	    	
@@ -397,7 +452,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    // Distance to closest exit
 	    double dist = 0;
 	    try {
-	    dist = avgDistToExit / maxDiameter;
+	    dist = metrics.avgDistToExit / maxDiameter;
 	    } catch(Exception e)
 	    {
 
@@ -407,15 +462,42 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    
 	    // Civilians trapped
 	    // Divided by totalCivilians + 1 so it never reaches 1
-	    fitness = (civTrapped + (fitness * 0.99)) / (totalCivilians + 1);
+	    fitness = (metrics.civTrapped + (fitness * 0.99)) / (totalCivilians + 1);
 	    
 	    // Civilians killed
-	    fitness = civDead + fitness;
+	    fitness = metrics.civDead + fitness;
 
 		return fitness;
 	}
 	
 	
+	@Override
+	protected double _evaluate(Individual i) {
+		// 1. Decode individual
+		DecodedDesign dd = decode(i);
+		
+		// 2. Generates automaton based on scenario and coordinates
+		SpecificCellularAutomaton automaton = setAutomaton(dd);
+	    
+	    // 3. Generates population of the simulation
+	    List<Pedestrian> crowd = setCrowd(dd, automaton);
+	    
+	    // 4. Calculates precalculated maps and runs simulation
+	    simulate(automaton);
+	    
+	    // METRICS
+	    SimulationMetrics metrics = getMetrics(automaton, crowd);
+	    
+	    
+	    // DATA TO SAVE
+	    // UNNECESSARY HERE
+	    // DEBUGGING
+	    //saveSimulationState(automaton, crowd);
+	    
+	    
+	    // FITNESS
+	    return getFitness(metrics);
+	}
 	
 	/**
 	   * Creates a permanent sign on the center of the exit rectangle, 
