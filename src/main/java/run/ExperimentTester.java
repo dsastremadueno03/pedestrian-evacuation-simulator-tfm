@@ -97,9 +97,9 @@ public class ExperimentTester {
 			    
 			    Individual best = ea.getStatistics().getBest();
 			    
-			    SimulationResult result = evaluator.getSimulation(best);
+			    SimulationResult bestResult = evaluator.getSimulation(best);
 				
-			    saveData(w, idExperiment, evaluator.getAutomatonToSave(), evaluator.getCrowdToSave(), evaluator.getScenarioToSave());
+			    saveData(w, idExperiment, bestResult);
 			   
 			    
 			}
@@ -110,140 +110,26 @@ public class ExperimentTester {
 
 	}
 
-	public static void saveData(PrintWriter w, int idExperiment, SpecificCellularAutomaton automaton, List<Pedestrian> crowd, Scenario scenario) {
-		// Fix mean and median if evacuees less than 2
-		double meanEvacuationTime = 0;
-		double medianEvacuationTime = 0;
-		double meanSteps = 0;
-		double medianSteps = 0;
-		int civEvacuated = automaton.evacuationTimes().length;
-		Statistics statistics = null;
-		try {
-		    if (civEvacuated >= 2) {
-		        statistics = automaton.computeStatistics();
-		        System.out.println(statistics);
-		        meanEvacuationTime = statistics.meanEvacuationTime();
-		        medianEvacuationTime = statistics.medianEvacuationTime();
-		        meanSteps = statistics.meanSteps();
-		        medianSteps = statistics.medianSteps();
-		    } else if (civEvacuated == 1) {
-		        // If only 1, mean and median are the same
-		        meanEvacuationTime = automaton.evacuationTimes()[0];
-		        medianEvacuationTime = meanEvacuationTime;
-		    }
-		} catch (Exception e) {
-		    System.out.println("Caesium cannot process native statistics.");
-		}
-					    
-		// Our extended metrics
-		int civDead = 0;
-		
-		// Lists to store Pedestrians for calculating distances for optimization
-		List<Civilian> civList = new ArrayList<Civilian>();
-		List<Attacker> attList = new ArrayList<Attacker>();
-		List<Police> polList = new ArrayList<Police>();
-		
-		// Count types of pedestrians
-		for(Pedestrian p : crowd) {
-			if(p instanceof Civilian) {
-				if(!((Civilian) p).isAlive()) {
-					civDead++;
-				}
-				else { // Pedestrians alive
-					if(!automaton.getScenario().isExit(p.getLocation())){ // Pedestrians trapped
-						civList.add((Civilian) p);
-					}
-				}
-			}
-			else if (p instanceof Attacker) {
-				if(((Attacker) p).isAlive()) {
-					attList.add((Attacker) p);
-				}
-			}
-			else if (p instanceof Police) {
-				if(((Police) p).isAlive()) {
-					polList.add((Police) p);
-				}
-			}
-		}
-		
-		int attAlive = attList.size();
-		int polAlive = polList.size();
-		int civTrapped = civList.size();
-		
-		// Distance calculation for trapped civilians (used in EA)
-		double distToExit = 0;
-		double distToAtt = 0;
-		double distToPol = 0;
-		double avgDistToExit = 0;
-		double avgDistToAtt = 0;
-		double avgDistToPol = 0;
-		
-		if(!civList.isEmpty()) {
-			for(Civilian c : civList) {
-				
-				// Distance to closest exit
-				double minDistToExit = Double.MAX_VALUE;
-				for(Rectangle exit : scenario.exits()) {
-					int centerRow = exit.bottom() + (exit.height() / 2);
-		            int centerCol = exit.left() + (exit.width() / 2);
-					double dist = automaton.getDistance(c.getRow(), c.getColumn(), centerRow, centerCol);
-					if(dist < minDistToExit) {
-						minDistToExit = dist;
-					}
-				}
-				distToExit += minDistToExit;
-				
-				// Distance to attacker
-				if(!attList.isEmpty()) {
-				double minDistToAtt = Double.MAX_VALUE;
-				for(Attacker att : attList) {
-					double dist = automaton.getDistance(c.getLocation(), att.getLocation());
-					if(dist < minDistToAtt) {
-						minDistToAtt = dist;
-					}
-				}
-				distToAtt += minDistToAtt;
-				
-				}
-				
-				// Distance to attacker
-				if(!polList.isEmpty()) {
-				double minDistToPol = Double.MAX_VALUE;
-				for(Police pol : polList) {
-					double dist = automaton.getDistance(c.getLocation(), pol.getLocation());
-					if(dist < minDistToPol) {
-						minDistToPol = dist;
-					}
-				}
-				distToPol += minDistToPol;
-				
-				}
-			}
-		}
-		
-		// Average distances to use in optimization
-		if(!civList.isEmpty()) {
-		    avgDistToExit = distToExit / civTrapped;
-		    avgDistToAtt = distToAtt / civTrapped;
-		    avgDistToPol = distToPol / civTrapped;
-		}
+	public static void saveData(PrintWriter w, int idExperiment, EAEvaluator.SimulationResult info) {
+		SpecificCellularAutomaton automaton = info.automaton();
+		EAEvaluator.SimulationMetrics m = info.metrics();
+		List<Pedestrian> crowd = info.crowd();
 		
 		
 		// Write statistics to csv file
 		w.println(idExperiment + "," +
-				civEvacuated + "," +
-				civDead + "," +
-				civTrapped + "," +
-				attAlive + "," +
-				polAlive + "," +
-				meanEvacuationTime + "," +
-				medianEvacuationTime + "," +
-				meanSteps + "," +
-				medianSteps + "," +
-				avgDistToExit + "," +
-				avgDistToAtt + "," +
-				avgDistToPol);
+				m.civEvacuated() + "," +
+				m.civDead() + "," +
+				m.civTrapped() + "," +
+				m.attAlive() + "," +
+				m.polAlive() + "," +
+				m.meanEvacuationTime() + "," +
+				m.medianEvacuationTime() + "," +
+				m.meanSteps() + "," +
+				m.medianSteps() + "," +
+				m.avgDistToExit() + "," +
+				m.avgDistToAtt() + "," +
+				m.avgDistToPol());
 		
 		w.flush();
 

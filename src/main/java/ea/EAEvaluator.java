@@ -105,7 +105,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	}
 	
 	// Stores simulation metrics
-	private record SimulationMetrics(
+	public record SimulationMetrics(
 			double meanEvacuationTime,
 		    double medianEvacuationTime,
 		    double meanSteps,
@@ -122,6 +122,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		
 	}
 	
+	// Stores simulation data and metrics not to repeat calculations and simulation
 	public record SimulationResult(
 			SpecificCellularAutomaton automaton,
 			List<Pedestrian> crowd,
