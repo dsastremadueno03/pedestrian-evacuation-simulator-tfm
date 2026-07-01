@@ -1,12 +1,12 @@
 {
-    "numruns" : 1,
+    "numruns" : 5,
     "seed" : 1,
     "islands" : [
         {
             "numislands" : 1,
-            "popsize" : 4,
-            "offspring" : 2,
-            "maxevals" : 6,
+            "popsize" : 20,
+            "offspring" : 20,
+            "maxevals" : 220,
             "initialization" : {
                 "name": "randomvector"
             },

@@ -52,7 +52,7 @@ public class ExperimentTester {
 		
 		try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
 			// Header
-			w.println("Experiment id,Civilians Evacuated,Civilians Killed,Civilians Trapped,Attackers Alive,Police Alive,Mean Time,Median Time,Mean Steps,Median Steps,Avg.Dist.Exit,Avg.Dist.Attaker,Avg.Dist.Police");
+			w.println("Experiment id,Run id,Fitness,Civilians Evacuated,Civilians Killed,Civilians Trapped,Attackers Alive,Police Alive,Mean Time,Median Time,Mean Steps,Median Steps,Avg.Dist.Exit,Avg.Dist.Attaker,Avg.Dist.Police");
 			
 			// Read JSON
 			FileReader r = new FileReader("data/experiments.json");
@@ -88,20 +88,30 @@ public class ExperimentTester {
 			    EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
 			    ea.setObjectiveFunction(evaluator);
 			    
+			    // Register best fitness
+			    double bestFitness = Double.MAX_VALUE;
+			    EAEvaluator.SimulationResult bestResult = null;
+			    
 			    // num_runs loop
 			    for(int i = 0; i < conf.getNumRuns(); i++) {
 			    	long thisSeed = conf.getSeed() + i;
 			    	ea.run(thisSeed);
+			    	
+			    	// We capture best individual of a specific run
+			    	Individual bestInRun = ea.getStatistics().getBest(i);
+			    	EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
+			    	double fitness = evaluator.getFitness(infoInRun.metrics());
+			    	
+			    	saveRunCSV(w, idExperiment, i, fitness, infoInRun);
+			    	if (fitness < bestFitness) {
+			    		bestFitness = fitness;
+			    		bestResult = infoInRun;
+			    	}
 			    }
 			    
-			    
-			    Individual best = ea.getStatistics().getBest();
-			    
-			    SimulationResult bestResult = evaluator.getSimulation(best);
-				
-			    saveData(w, idExperiment, bestResult);
+			    // Best of all runs
+			    saveData(w, idExperiment, bestFitness, bestResult);
 			   
-			    
 			}
 		}
 		catch(Exception e) {
@@ -109,8 +119,38 @@ public class ExperimentTester {
 		}
 
 	}
+	
+	/**
+	 * Saves data of the run
+	 * @param w file to write in
+	 * @param idExperiment current experiment
+	 * @param idRun current run
+	 * @param fitness fitness of the best individual of current run
+	 * @param info simulation data
+	 */
+	public static void saveRunCSV(PrintWriter w, int idExperiment, int idRun, double fitness, EAEvaluator.SimulationResult info) {
+		EAEvaluator.SimulationMetrics m = info.metrics();
+		
+		w.println(idExperiment + "," +
+				idRun + "," +
+				fitness + "," +
+				m.civEvacuated() + "," +
+				m.civDead() + "," +
+				m.civTrapped() + "," +
+				m.attAlive() + "," +
+				m.polAlive() + "," +
+				m.meanEvacuationTime() + "," +
+				m.medianEvacuationTime() + "," +
+				m.meanSteps() + "," +
+				m.medianSteps() + "," +
+				m.avgDistToExit() + "," +
+				m.avgDistToAtt() + "," +
+				m.avgDistToPol());
+		
+		w.flush();
+	}
 
-	public static void saveData(PrintWriter w, int idExperiment, EAEvaluator.SimulationResult info) {
+	public static void saveData(PrintWriter w, int idExperiment, double fitness, EAEvaluator.SimulationResult info) {
 		SpecificCellularAutomaton automaton = info.automaton();
 		EAEvaluator.SimulationMetrics m = info.metrics();
 		List<Pedestrian> crowd = info.crowd();
@@ -118,6 +158,8 @@ public class ExperimentTester {
 		
 		// Write statistics to csv file
 		w.println(idExperiment + "," +
+				"BEST," +
+				fitness + "," +
 				m.civEvacuated() + "," +
 				m.civDead() + "," +
 				m.civTrapped() + "," +
@@ -171,7 +213,6 @@ public class ExperimentTester {
 		try (FileWriter rolesWriter = new FileWriter(rolesFileName)) {
 		    rolesWriter.write(Jsoner.prettyPrint(rolesJson.toJson()));
 		    rolesWriter.flush();
-		    System.out.printf("Roles written to file %s successfully.%n", rolesFileName);
 		} catch (IOException e) {
 		    e.printStackTrace();
 		}

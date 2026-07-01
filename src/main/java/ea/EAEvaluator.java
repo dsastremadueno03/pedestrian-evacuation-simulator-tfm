@@ -134,7 +134,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	 * @param i Individual to be decoded
 	 * @return record of lists containing exits, signs and police coordinates
 	 */
-	protected DecodedDesign decode(Individual i) {
+	public DecodedDesign decode(Individual i) {
 		Genotype g = i.getGenome(); // Genes from EA
 		int gene = 0; // Index of gene
 		
@@ -209,7 +209,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	 * @param dd record of lists that stores coordinates 
 	 * @return automaton set 
 	 */
-	protected SpecificCellularAutomaton setAutomaton(DecodedDesign dd) {
+	public SpecificCellularAutomaton setAutomaton(DecodedDesign dd) {
 		// Exit placement
 		var domainAcc = domain.getAccesses();
 		domainAcc.clear();
@@ -249,7 +249,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			    
 	}
 	
-	protected List<Pedestrian> setCrowd(DecodedDesign dd, SpecificCellularAutomaton automaton){
+	public List<Pedestrian> setCrowd(DecodedDesign dd, SpecificCellularAutomaton automaton){
 		List<PedestrianWithVisionParameters> civParams = new ArrayList<>();
 	    for (int j = 0; j < populationConfig.numCivilians(); j++) {
 	        civParams.add(buildParams(weightJson, 0));
@@ -290,7 +290,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	 * Calculates maps before run and then simulates
 	 * @param automaton
 	 */
-	protected void simulate(SpecificCellularAutomaton automaton) {
+	public void simulate(SpecificCellularAutomaton automaton) {
 		automaton.calculateVisibilityMap();
 	    automaton.calculateDistanceMap();
 
@@ -302,7 +302,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    automaton.run();
 	}
 	
-	protected SimulationMetrics getMetrics(SpecificCellularAutomaton automaton, List<Pedestrian> crowd) {
+	public SimulationMetrics getMetrics(SpecificCellularAutomaton automaton, List<Pedestrian> crowd) {
 		// Fix mean and median if evacuees less than 2
 	    double meanEvacuationTime = 0;
         double medianEvacuationTime = 0;
@@ -428,7 +428,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	 * Calculates fitness based on metrics of an individual following a cascaded fitness calculation
 	 * @return
 	 */
-	protected double getFitness(SimulationMetrics metrics) {
+	public double getFitness(SimulationMetrics metrics) {
 	    // Limit values
 	    double maxDiameter = eep.getDiameter();
 	    double totalCivilians = populationConfig.numCivilians();
@@ -506,7 +506,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    	int centerCol = exit.left() + (exit.width() / 2);
 	    	EvacuationPlanSign exitSign = new EvacuationPlanSign(centerRow, centerCol);
 	    	automaton.addSign(exitSign);
-	    	System.out.println("Exit Sign generated at (" + centerRow + ", " + centerCol + ").");
+	    	//System.out.println("Exit Sign generated at (" + centerRow + ", " + centerCol + ").");
 	    }
 	  }
 
