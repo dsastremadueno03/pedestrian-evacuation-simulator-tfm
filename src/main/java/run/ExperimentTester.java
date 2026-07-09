@@ -9,6 +9,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import com.github.cliftonlabs.json_simple.JsonArray;
 import com.github.cliftonlabs.json_simple.JsonObject;
@@ -81,36 +84,64 @@ public class ExperimentTester {
 			    SimulationConfiguration simulation = SimulationConfiguration.fromJson(experiment);
 			    ExitEvacuationProblem eep = new ExitEvacuationProblem(environment, environmentNumbers[0], simulation);
 			    
-			    EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson);
-			    
 			    FileReader reader = new FileReader("data/numeric.json");
 				EAConfiguration conf = new EAConfiguration((JsonObject) Jsoner.deserialize(reader));
-			    EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
-			    ea.setObjectiveFunction(evaluator);
-			    
-			    // Register best fitness
+				
+				// PARALLELISM
+				int runs = conf.getNumRuns();
+				long seed = conf.getSeed();
+				
+				// Setting up
+				int nCores = Runtime.getRuntime().availableProcessors();
+				ExecutorService exec = Executors.newFixedThreadPool(nCores);
+				List<Future<ThreadInfo>> results = new ArrayList<Future<ThreadInfo>>();
+				
+				// num_runs loop
+			    for(int i = 0; i < runs; i++) {
+			    	final int runId = i;
+			    	final long thisSeed = seed + i;
+			    	
+			    	// Generates independent threads
+			    	results.add(exec.submit(()->{
+			    		EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson);
+			    		EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
+			    		ea.setObjectiveFunction(evaluator);
+			    		
+			    		ea.run(thisSeed);
+			    		
+			    		Individual bestInRun = ea.getStatistics().getBest(0); // There is only 1 run in a thread
+				    	EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
+				    	double fitness = evaluator.getFitness(infoInRun.metrics());
+				    	
+				    	return new ThreadInfo(runId, fitness, infoInRun);
+			    		
+			    	} ));			    	
+			    }
+				
+			    // Blocks new parallel tasks
+			    exec.shutdown();
+
+			    // Register best run
 			    double bestFitness = Double.MAX_VALUE;
 			    EAEvaluator.SimulationResult bestResult = null;
 			    
-			    // num_runs loop
-			    for(int i = 0; i < conf.getNumRuns(); i++) {
-			    	long thisSeed = conf.getSeed() + i;
-			    	ea.run(thisSeed);
-			    	
-			    	// We capture best individual of a specific run
-			    	Individual bestInRun = ea.getStatistics().getBest(i);
-			    	EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
-			    	double fitness = evaluator.getFitness(infoInRun.metrics());
-			    	
-			    	saveRunCSV(w, idExperiment, i, fitness, infoInRun);
-			    	if (fitness < bestFitness) {
-			    		bestFitness = fitness;
-			    		bestResult = infoInRun;
+			    // Register individual runs
+			    for(Future<ThreadInfo> result : results){
+			    	try {
+			    		ThreadInfo taskInfo = result.get();
+			    		saveRunCSV(w, idExperiment, taskInfo.runId, taskInfo.fitness, taskInfo.info);
+			    		if(taskInfo.fitness < bestFitness) {
+			    			bestFitness = taskInfo.fitness;
+			    			bestResult = taskInfo.info;
+			    		}
+			    	} catch(Exception e){
+			    		
 			    	}
 			    }
 			    
-			    // Best of all runs
-			    saveData(w, idExperiment, bestFitness, bestResult);
+			    if(bestResult != null) {
+			    	saveData(w, idExperiment, bestFitness, bestResult);
+			    }
 			   
 			}
 		}
@@ -268,5 +299,9 @@ public class ExperimentTester {
 	            .inertiaWeight(inertia)
 	            .build();
 	    }
+	  
+	  private static record ThreadInfo(int runId, double fitness, EAEvaluator.SimulationResult info) {
+		  
+	  }
 	  
 }
