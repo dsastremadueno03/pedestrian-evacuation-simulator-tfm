@@ -2,6 +2,7 @@ package ea;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import com.github.cliftonlabs.json_simple.JsonArray;
 import com.github.cliftonlabs.json_simple.JsonObject;
@@ -16,10 +17,20 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.Statistics;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.floorField.DijkstraStaticFloorFieldWithMooreNeighbourhood;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.floorField.DijkstraStaticFloorFieldWithVonNewmanNeighbourhood;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.floorField.ManhattanStaticFloorField;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.VonNeumannNeighbourhood;
+
+
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.floorField.FloorField;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.Neighbourhood;
+
+
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.configuration.SimulationConfiguration;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
@@ -54,12 +65,18 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	private int mapWidth;
 	private int mapHeight;
 	
+	// Contains data about cell dimension, neighborhood and floor field
+	private SimulationConfiguration simulation; 
+	private double cellDimension;
+	private final Function<Scenario, FloorField> floorField;
+	private final Function<Scenario, Neighbourhood> neighborhood;
+	
 	private Scenario scenarioToSave;
 	private List<Pedestrian> crowdToSave;
 	private SpecificCellularAutomaton automatonToSave;
 	
 	// Objective function
-	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson){
+	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson, SimulationConfiguration simulation){
 		// Number of genes
 		super(nExits + (nTempSigns * 2) + (nPermSigns * 2) + (nPolice * 2), 0, 1);
 		
@@ -70,6 +87,22 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		this.domain = domain;
 		this.populationConfig = populationConfig;
 		this.weightJson = weightJson;
+		
+		// No easy access to this data, need to calculate it here again
+		cellDimension = simulation.getDouble("cellularAutomatonParameters/cellDimension");
+		floorField =
+				switch (simulation.getString("cellularAutomatonParameters/floorField")) {
+					case "DijkstraStaticMoore" -> DijkstraStaticFloorFieldWithMooreNeighbourhood::of;
+					case "DijkstraStaticVonNeumann" -> DijkstraStaticFloorFieldWithVonNewmanNeighbourhood::of;
+					case "ManhattanStatic" -> ManhattanStaticFloorField::of;
+					default -> throw new IllegalArgumentException("Invalid floor field in configuration");
+				};
+		neighborhood =
+				switch (simulation.getString("cellularAutomatonParameters/neighborhood")) {
+					case "Moore" -> MooreNeighbourhood::of;
+					case "VonNeumann" -> VonNeumannNeighbourhood::of;
+					default -> throw new IllegalArgumentException("Invalid neighbourhood in configuration");
+				};
 		
 		this.nExits = nExits;
 		this.nTempSigns = nTempSigns;
@@ -216,8 +249,8 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		domainAcc.addAll(dd.trialExits);
 
 		Scenario scenario = new Scenario.FromDomainBuilder(domain)
-				.cellDimension(domain.getWidth() / 110)
-			    .floorField(DijkstraStaticFloorFieldWithMooreNeighbourhood::of)
+				.cellDimension(cellDimension)
+			    .floorField(floorField)
 			    .build();
 
 		// Default Scenarios from classes
@@ -227,7 +260,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 				new CellularAutomatonParameters.Builder()
 			            .scenario(scenario) // use this scenario
 			            .timeLimit(2 * 60) // 2 minutes is time limit for simulation
-			            .neighbourhood(MooreNeighbourhood::of) // use Moore's Neighbourhood for automaton
+			            .neighbourhood(neighborhood) // use Moore's Neighbourhood for automaton
 			            .pedestrianReferenceVelocity(1.3) // fastest pedestrians walk at 1.3 m/s
 			            .GUITimeFactor(8) // perform GUI animation x8 times faster than real time
 			            .build();

@@ -103,7 +103,7 @@ public class ExperimentTester {
 			    	
 			    	// Generates independent threads
 			    	results.add(exec.submit(()->{
-			    		EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson);
+			    		EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation);
 			    		EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
 			    		ea.setObjectiveFunction(evaluator);
 			    		
