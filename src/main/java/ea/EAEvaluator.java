@@ -48,7 +48,7 @@ import signs.EvacuationPlanSign;
 
 public class EAEvaluator extends ContinuousObjectiveFunction{
 	
-	private final double MAX_SIMULATION_TIME = 60 * 2; // 2 min
+	private double maxSimulationTime;
 	
 	private ExitEvacuationProblem eep;
 	private Double2AccessDecoder decoder;
@@ -79,6 +79,8 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson, SimulationConfiguration simulation){
 		// Number of genes
 		super(nExits + (nTempSigns * 2) + (nPermSigns * 2) + (nPolice * 2), 0, 1);
+		
+		maxSimulationTime = simulation.getDouble("timeLimit");
 		
 		this.eep = eep;
 		decoder = new Double2AccessDecoder(eep);
@@ -259,7 +261,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		var cellularAutomatonParameters =
 				new CellularAutomatonParameters.Builder()
 			            .scenario(scenario) // use this scenario
-			            .timeLimit(2 * 60) // 2 minutes is time limit for simulation
+			            .timeLimit(maxSimulationTime) // 2 minutes is time limit for simulation
 			            .neighbourhood(neighborhood) // use Moore's Neighbourhood for automaton
 			            .pedestrianReferenceVelocity(1.3) // fastest pedestrians walk at 1.3 m/s
 			            .GUITimeFactor(8) // perform GUI animation x8 times faster than real time
@@ -471,7 +473,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    // Time
 	    double time = 0;
 	    try {
-	    time = metrics.meanEvacuationTime / MAX_SIMULATION_TIME;
+	    time = metrics.meanEvacuationTime / maxSimulationTime;
 	    } catch(Exception e)
 	    {
 	    	
