@@ -50,6 +50,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	
 	private double maxSimulationTime;
 	
+	// Scenario to avoid sign generation in blocked cells
+	private Scenario baseScenario;
+	
+	// Basic data and parameters
 	private ExitEvacuationProblem eep;
 	private Double2AccessDecoder decoder;
 	private Domain domain;
@@ -70,10 +74,6 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	private double cellDimension;
 	private final Function<Scenario, FloorField> floorField;
 	private final Function<Scenario, Neighbourhood> neighborhood;
-	
-	private Scenario scenarioToSave;
-	private List<Pedestrian> crowdToSave;
-	private SpecificCellularAutomaton automatonToSave;
 	
 	// Objective function
 	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson, SimulationConfiguration simulation){
@@ -110,23 +110,18 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		this.nTempSigns = nTempSigns;
 		this.nPermSigns = nPermSigns;
 		this.nPolice = nPolice;
+		
+		// Scenario to avoid sign generation in blocked cells
+		this.baseScenario = new Scenario.FromDomainBuilder(domain)
+				.cellDimension(cellDimension)
+				.floorField(floorField)
+				.build();
+		
 	}
 	
 	@Override
 	public OptimizationSense getOptimizationSense() {
 		return OptimizationSense.MINIMIZATION;
-	}
-	
-	public Scenario getScenarioToSave() {
-		return scenarioToSave;
-	}
-	
-	public List<Pedestrian> getCrowdToSave() {
-		return crowdToSave;
-	}
-	
-	public SpecificCellularAutomaton getAutomatonToSave() {
-		return automatonToSave;
 	}
 	
 	// Stores lists of coordinates out of decoding
@@ -200,6 +195,11 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			// Change from scale 0-1 to real size map
 			int row = (int) (geneRow * (mapHeight -1));
 			int col = (int) (geneCol * (mapWidth -1));
+			
+			// Checks that the signal is not in an occupied cell
+			if(baseScenario.isBlocked(row, col) || baseScenario.isExit(row, col)) {
+				continue;
+			}
 			
 			trialTempVisSigns.add(new EphimeralVisualSign(row, col));
 		}
