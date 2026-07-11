@@ -8,6 +8,7 @@ import java.util.List;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Canvas;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Frame;
 import pedestrian.MultiPedestrianFactory;
 import signs.EphimeralVisualSign;
 import signs.EvacuationPlanSign;
@@ -281,6 +282,89 @@ public class SpecificCellularAutomaton extends CellularAutomaton {
 		g.setColor(originalColor);
 		
 	}
+
+	// COPIES EXTERNAL PRIVATE CLASSES FOR GUI DEBUG
 	
+	/**
+	   * Runs this automaton until end conditions are met.
+	   *
+	   * @param gui if this parameter is {@code true} the simulation is displayed in a GUI.
+	   */
+	  private void run(boolean gui) {
+	    Canvas canvas = null;
+	    if (gui) {
+	      canvas =
+	          new Canvas.Builder()
+	              .rows(scenario.getRows())
+	              .columns(scenario.getColumns())
+	              .pixelsPerCell(5)
+	              .paint(SpecificCellularAutomaton.this::paint)
+	              .build();
+
+	      new Frame(canvas);
+	    }
+	    var thread = new RunThread(canvas);
+	    thread.start();
+	    try {
+	      thread.join(); // wait for thread to complete
+	    } catch (InterruptedException e) {
+	      System.out.println("Interrupted!");
+	    }
+	  }
+	  
+	  /**
+	   * Thread for running the simulation.
+	   */
+	  private class RunThread extends Thread {
+	    final Canvas canvas;
+
+	    public RunThread(Canvas canvas) {
+	      this.canvas = canvas;
+	    }
+
+	    public void run() {
+	      scenario.getStaticFloorField().initialize();
+	      timeSteps = 0;
+	      var maximalTimeSteps = parameters.timeLimit() / parameters.timePerTick();
+
+	      if (canvas != null) {
+	        // show initial configuration for 1.5 seconds
+	        canvas.update();
+	        try {
+	          Thread.sleep(1500);
+	        } catch (Exception ignored) {
+	        }
+	      }
+
+	      var millisBefore = System.currentTimeMillis();
+	      while (!inScenarioPedestrians.isEmpty() && timeSteps < maximalTimeSteps) {
+	        timeStep();
+	        if (canvas != null) {
+	          canvas.update();
+	          var elapsedMillis = (System.currentTimeMillis() - millisBefore);
+	          try {
+	            // wait some milliseconds to synchronize animation
+	            Thread.sleep(((int) (parameters.timePerTick() * 1000) - elapsedMillis) / parameters.GUITimeFactor());
+	            millisBefore = System.currentTimeMillis();
+	          } catch (Exception ignored) {
+	          }
+	        }
+	      }
+	      if (canvas != null) {
+	        // show final configuration
+	        canvas.update();
+	      }
+	    }
+	  }
+	  
+	  @Override
+	public void run() {
+		  run(false);
+	}
+	  
+	  @Override
+	public void runGUI() {
+		  run(true);
+	}
 }
 
