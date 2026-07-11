@@ -84,14 +84,17 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		
 		this.eep = eep;
 		decoder = new Double2AccessDecoder(eep);
-		mapWidth = (int) eep.getWidth();
-		mapHeight = (int) eep.getHeight();
+		
+		// Need to convert it to cells
+		cellDimension = simulation.getDouble("cellularAutomatonParameters/cellDimension");
+		mapWidth = (int) Math.ceil(eep.getWidth() / cellDimension);
+		mapHeight = (int) Math.ceil(eep.getHeight() / cellDimension);
+		
 		this.domain = domain;
 		this.populationConfig = populationConfig;
 		this.weightJson = weightJson;
 		
 		// No easy access to this data, need to calculate it here again
-		cellDimension = simulation.getDouble("cellularAutomatonParameters/cellDimension");
 		floorField =
 				switch (simulation.getString("cellularAutomatonParameters/floorField")) {
 					case "DijkstraStaticMoore" -> DijkstraStaticFloorFieldWithMooreNeighbourhood::of;
@@ -380,9 +383,9 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    //System.out.println("Simulating...");
 	    
 	    // ONLY FOR DEBUG PURPOSES
-	    //automaton.runGUI();
+	    automaton.runGUI();
 	    System.out.print("Iteration Completed!");
-	    automaton.run();
+	    //automaton.run();
 	}
 	
 	public SimulationMetrics getMetrics(SpecificCellularAutomaton automaton, List<Pedestrian> crowd) {
