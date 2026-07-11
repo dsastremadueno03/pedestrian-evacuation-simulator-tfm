@@ -531,7 +531,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    dist = metrics.avgDistToExit * cellDimension / maxDiameter; // In meters
 	    }
 	    
-	    // Divided by 10 to ensure it never reaches 1
+	    // Divided by 10 to ensure it never reaches 1 of the following level
 	    fitness = dist + time / 10.0;
 	    
 	    // Civilians trapped
