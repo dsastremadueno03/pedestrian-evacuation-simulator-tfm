@@ -124,12 +124,13 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		return OptimizationSense.MINIMIZATION;
 	}
 	
-	// Stores lists of coordinates out of decoding
+	// Stores lists of coordinates out of decoding and the penalty for repairing
 	private record DecodedDesign(
 		    List<Access> trialExits,
 		    List<EphimeralVisualSign> trialTempVisSigns,
 		    List<EvacuationPlanSign> trialPermVisSigns,
-		    List<int[]> trialPolice
+		    List<int[]> trialPolice,
+		    double repairPenalty
 		) {
 		
 	}
@@ -160,6 +161,39 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			) {}
 	
 	/**
+	 * Repairs the coordinates of a sign in the map if placed in an occupied cell
+	 * 
+	 * @param initRow Proposed row
+	 * @param initCol Proposed column
+	 * @return Repaired coordinates
+	 */
+	private int[] repair(int initRow, int initCol) {
+		// If possible placement, do nothing
+		if(!baseScenario.isBlocked(initRow, initCol)) {
+			return new int[] {initRow, initCol};
+		}
+		// Otherwise, find valid coordinates 
+		int r = 1;
+		int maxRadius = Math.max(mapHeight, mapWidth);
+		
+		while(r < maxRadius) {
+			for(int row = initRow - r; row <= initRow + r; row++) {
+				for(int col = initCol - r; col <= initCol + r; col++) {
+					if(row >= 0 && row < mapHeight && col >= 0 && col < mapWidth) {
+						if(!baseScenario.isBlocked(row, col)) {
+							// Return new coordinates
+							return new int[] {row, col};
+						}
+					}
+				}
+			}
+			r++;
+		}
+		// Return original coordinates is map is full
+		return new int[] {initRow, initCol};
+	}
+	
+	/**
 	 * Decodes an individual from its genome
 	 * @param i Individual to be decoded
 	 * @return record of lists containing exits, signs and police coordinates
@@ -167,6 +201,9 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	public DecodedDesign decode(Individual i) {
 		Genotype g = i.getGenome(); // Genes from EA
 		int gene = 0; // Index of gene
+		
+		// Stores penalty for reparation
+		double totalPenalty = 0; 
 		
 		// Gene Translation
 		// Exits 
@@ -196,12 +233,12 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			int row = (int) (geneRow * (mapHeight -1));
 			int col = (int) (geneCol * (mapWidth -1));
 			
-			// Checks that the signal is not in an occupied cell
-			if(baseScenario.isBlocked(row, col) || baseScenario.isExit(row, col)) {
-				continue;
-			}
+			int[] repairedCoordinates = repair(row,col);
 			
-			trialTempVisSigns.add(new EphimeralVisualSign(row, col));
+			// Distance from original coordinates to repaired ones (used as penalty)
+			totalPenalty += Math.abs(row - repairedCoordinates[0]) + Math.abs(col - repairedCoordinates[1]);
+			
+			trialTempVisSigns.add(new EphimeralVisualSign(repairedCoordinates[0], repairedCoordinates[1]));
 		}
 		
 		// Permanent Visual Signs
@@ -216,8 +253,13 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			// Change from scale 0-1 to real size map
 			int row = (int) (geneRow * (mapHeight -1));
 			int col = (int) (geneCol * (mapWidth -1));
-					
-			trialPermVisSigns.add(new EvacuationPlanSign(row, col));
+			
+			int[] repairedCoordinates = repair(row,col);
+			
+			// Distance from original coordinates to repaired ones (used as penalty)
+			totalPenalty += Math.abs(row - repairedCoordinates[0]) + Math.abs(col - repairedCoordinates[1]);
+			
+			trialPermVisSigns.add(new EvacuationPlanSign(repairedCoordinates[0], repairedCoordinates[1]));
 		}
 		
 		// Police
@@ -232,11 +274,17 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			// Change from scale 0-1 to real size map
 			int row = (int) (geneRow * (mapHeight -1));
 			int col = (int) (geneCol * (mapWidth -1));
+			
+			int[] repairedCoordinates = repair(row,col);
+			
+			// Distance from original coordinates to repaired ones (used as penalty)
+			totalPenalty += Math.abs(row - repairedCoordinates[0]) + Math.abs(col - repairedCoordinates[1]);
+			
+			trialPolice.add(repairedCoordinates);
 							
-			trialPolice.add(new int[]{row, col});
 		}
 		
-		return new DecodedDesign(trialExits, trialTempVisSigns, trialPermVisSigns, trialPolice);
+		return new DecodedDesign(trialExits, trialTempVisSigns, trialPermVisSigns, trialPolice, totalPenalty);
 	}
 	
 	/**
@@ -466,38 +514,31 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	public double getFitness(SimulationMetrics metrics) {
 	    // Limit values
 	    double maxDiameter = eep.getDiameter();
-	    double totalCivilians = populationConfig.numCivilians();
 	    
 	    double fitness = 0;
 	    
 	    // Time
 	    double time = 0;
-	    try {
+	    if(maxSimulationTime > 0) {
 	    time = metrics.meanEvacuationTime / maxSimulationTime;
-	    } catch(Exception e)
-	    {
-	    	
 	    }
 	    
 	    fitness = time;
 	    
 	    // Distance to closest exit
 	    double dist = 0;
-	    try {
-	    dist = metrics.avgDistToExit / maxDiameter;
-	    } catch(Exception e)
-	    {
-
+	    if(maxDiameter > 0) {
+	    dist = metrics.avgDistToExit * cellDimension / maxDiameter; // In meters
 	    }
-	    // Divided by 2 to ensure it never reaches 1
-	    fitness = (dist + (fitness * 0.99)) / 2.0;
+	    
+	    // Divided by 10 to ensure it never reaches 1
+	    fitness = dist + time / 10.0;
 	    
 	    // Civilians trapped
-	    // Divided by totalCivilians + 1 so it never reaches 1
-	    fitness = (metrics.civTrapped + (fitness * 0.99)) / (totalCivilians + 1);
+	    fitness = metrics.civTrapped + fitness / 10.0;
 	    
 	    // Civilians killed
-	    fitness = metrics.civDead + fitness;
+	    fitness = metrics.civDead + fitness / 10.0;
 
 		return fitness;
 	}
@@ -524,7 +565,8 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    SimulationMetrics metrics = getMetrics(automaton, crowd);
 	    
 	    // 6. Calculate fitness
-	    return getFitness(metrics);
+	    double repairPenaltyWeight = 0.001; // Repair penalty importance less than trapped civilians
+	    return getFitness(metrics) + dd.repairPenalty * repairPenaltyWeight;
 	}
 	
 	/**
