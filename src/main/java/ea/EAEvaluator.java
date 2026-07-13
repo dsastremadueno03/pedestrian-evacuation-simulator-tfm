@@ -29,11 +29,13 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.configuration.SimulationConfiguration;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Shape;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
 import pedestrian.MultiPedestrianFactory;
@@ -164,6 +166,103 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			) {}
 	
 	/**
+	 * Checks whether an exit can be completely placed in a valid location
+	 * 
+	 * @param location Location of the exit in the 1D representation of the boarder
+	 * @return True if exit can be placed
+	 */
+	private boolean isExitValid(double location) {
+		// Calculates rectangles generated to resemble exits
+		List<Shape.Rectangle> rectangles = decoder.locationToRectangles(location);
+		
+		// Requires getting bounds of rectangles to get coordinates
+		for(Shape.Rectangle r : rectangles) {
+			var bounds = r.getAWTShape().getBounds2D();
+			
+			// Convert to cells
+			int minRow = (int) (bounds.getMinY() / cellDimension);
+			int minCol = (int) (bounds.getMinX() / cellDimension);
+			// -0.001 to avoid rounding problems
+			int maxRow = (int) ((bounds.getMaxY() - 0.001) / cellDimension);
+			int maxCol = (int) ((bounds.getMaxX() - 0.001) / cellDimension);
+			
+			// Enforce values inside map limit
+			minRow = Math.max(0, Math.min(mapHeight - 1, minRow));
+			minCol = Math.max(0, Math.min(mapWidth - 1, minCol));
+			maxRow = Math.max(0, Math.min(mapHeight- 1, maxRow));
+			maxCol = Math.max(0, Math.min(mapWidth - 1, maxCol));
+			
+			// Validates exit by looking the status of the cell facing INWARDS 
+			// BOTTOM
+			if(minRow == 0) {
+				for(int col = minCol; col <= maxCol; col++) {
+					if(baseScenario.isBlocked(1, col)) {
+						return false;
+					}
+				}
+			}
+			// RIGHT
+			if(maxCol == mapWidth - 1) {
+				for(int row = minRow; row <= maxRow; row++) {
+					if(baseScenario.isBlocked(row, mapWidth - 2)) {
+						return false;
+					}
+				}
+			}
+			// TOP
+			if(maxRow == mapHeight - 1) {
+				for(int col = minCol; col <= maxCol; col++) {
+					if(baseScenario.isBlocked(mapHeight - 2, col)) {
+						return false;
+					}
+				}
+			}
+			// LEFT
+			if(minCol == 0) {
+				for(int row = minRow; row <= maxRow; row++) {
+					if(baseScenario.isBlocked(row, 1)) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * Repairs the exit's 1D location
+	 * 
+	 * @param location Exit's original location
+	 * @return New valid location
+	 */
+	private double repairExit(double location) {
+		if(isExitValid(location)) {
+			return location;
+		}
+		
+		int maxRadius = (int) Math.ceil(eep.getPerimeterLength() / cellDimension);
+		
+		for(int r = 1; r < maxRadius; r++) {
+			// Translates radius to meters
+			double offset = r * cellDimension;
+			// Checks that to the right is valid
+			double right = (location + offset) % eep.getPerimeterLength();
+			if(isExitValid(right)) {
+				return right;
+			}
+			// Checks that to the left is valid (add the perimeter to avoid negative numbers)
+			double left = (location - offset + eep.getPerimeterLength()) % eep.getPerimeterLength();
+			if(isExitValid(left)) {
+				return left;
+			}
+			
+		}
+		// If repair is not possible
+		return location;
+		
+	}
+	
+	/**
 	 * Repairs the coordinates of a sign in the map if placed in an occupied cell
 	 * 
 	 * @param initRow Proposed row
@@ -176,10 +275,9 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			return new int[] {initRow, initCol};
 		}
 		// Otherwise, find valid coordinates 
-		int r = 1;
 		int maxRadius = Math.max(mapHeight, mapWidth);
 		
-		while(r < maxRadius) {
+		for(int r = 1; r < maxRadius; r++) {
 			for(int row = initRow - r; row <= initRow + r; row++) {
 				for(int col = initCol - r; col <= initCol + r; col++) {
 					if(row >= 0 && row < mapHeight && col >= 0 && col < mapWidth) {
@@ -190,7 +288,6 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 					}
 				}
 			}
-			r++;
 		}
 		// Return original coordinates is map is full
 		return new int[] {initRow, initCol};
@@ -217,9 +314,18 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			gene++;
 			// Calculates cell over perimeter of map, avoiding precision errors
 			double location = Math.round(geneInfo * eep.getPerimeterLength() * 10) / 10.0;
+			// Check if door is valid and repair it otherwise
+			double repairedLocation = repairExit(location);
+			// If repaired, calculate penalty
+			if(location != repairedLocation) {
+				double diff = Math.abs(repairedLocation - location);
+				// Take minimum error distance
+				double distance = Math.min(eep.getPerimeterLength() - diff, diff);
+				totalPenalty += distance;
+			}
+			
 			// Converts location into real exit (access)
-			// Requires addAll since it might generate more than one exit at a time (corner case)
-			trialExits.addAll(decoder.decodeAccess(location, j, exitID));
+			trialExits.addAll(decoder.decodeAccess(repairedLocation, j, exitID));
 			exitID = trialExits.size();
 		}
 		
@@ -335,6 +441,13 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			    
 	}
 	
+	/**
+	 * Sets crowd in the automaton following decoded individual
+	 * 
+	 * @param dd Decoded individual information
+	 * @param automaton Pre-loaded scenario with environment data
+	 * @return List of pedestrians in the automaton
+	 */
 	public List<Pedestrian> setCrowd(DecodedDesign dd, SpecificCellularAutomaton automaton){
 		List<PedestrianWithVisionParameters> civParams = new ArrayList<>();
 	    for (int j = 0; j < populationConfig.numCivilians(); j++) {
@@ -374,7 +487,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	
 	/**
 	 * Calculates maps before run and then simulates
-	 * @param automaton
+	 * @param automaton Automaton to be used
 	 */
 	public void simulate(SpecificCellularAutomaton automaton) {
 		automaton.calculateVisibilityMap();
@@ -388,6 +501,13 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    //automaton.run();
 	}
 	
+	/**
+	 * Returns the metrics from the automaton
+	 * 
+	 * @param automaton Used automaton
+	 * @param crowd Data of pedestrians
+	 * @return Collection of metrics
+	 */
 	public SimulationMetrics getMetrics(SpecificCellularAutomaton automaton, List<Pedestrian> crowd) {
 		// Fix mean and median if evacuees less than 2
 	    double meanEvacuationTime = 0;
@@ -512,7 +632,8 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	
 	/**
 	 * Calculates fitness based on metrics of an individual following a cascaded fitness calculation
-	 * @return
+	 * @param metrics Metrics used for fitness calculation
+	 * @return Fitness calculated following metrics
 	 */
 	public double getFitness(SimulationMetrics metrics) {
 	    // Limit values
@@ -618,6 +739,12 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	            .build();
 	    }
 	  
+	  /**
+	   * Returns data from specific individual's simulation
+	   * 
+	   * @param i Individual to be analyzed
+	   * @return Simulation data
+	   */
 	  public SimulationResult getSimulation(Individual i) {
 		  DecodedDesign dd = decode(i);
 		  SpecificCellularAutomaton automaton = setAutomaton(dd);
