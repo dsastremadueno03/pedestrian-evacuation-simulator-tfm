@@ -55,6 +55,8 @@ public class ExperimentTester {
 
 	public static void main(String[] args) {
 		
+		System.out.println("STARTING...");
+		
 		String resultsCSV = "results.csv";
 		
 		try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
@@ -79,15 +81,11 @@ public class ExperimentTester {
 				JsonObject environmentData = (JsonObject) experiment.get("environment");
 				int[] environmentNumbers = ExtraJsonParameterLoader.loadEnvironment(environmentData); // 0 -> nExits, 1 -> permSigns, 2 -> tempSigns
 				
+				SimulationConfiguration simulation = SimulationConfiguration.fromJson(experiment);
+				
 				// Initialization
 				random.setSeed(JsonUtil.getInt(experiment, "seed"));
-				
-				// Scenario from json
-				Environment environment = Environment.fromFile(mapPath);
-			    Domain domain = environment.getDomain(1);
-			    SimulationConfiguration simulation = SimulationConfiguration.fromJson(experiment);
-			    ExitEvacuationProblem eep = new ExitEvacuationProblem(environment, environmentNumbers[0], simulation);
-			    
+				    
 			    FileReader reader = new FileReader("data/numeric.json");
 				EAConfiguration conf = new EAConfiguration((JsonObject) Jsoner.deserialize(reader));
 				
@@ -107,6 +105,10 @@ public class ExperimentTester {
 			    	
 			    	// Generates independent threads
 			    	results.add(exec.submit(()->{
+			    		// Scenario from json
+						Environment environment = Environment.fromFile(mapPath);
+					    Domain domain = environment.getDomain(1);
+					    ExitEvacuationProblem eep = new ExitEvacuationProblem(environment, environmentNumbers[0], simulation);	
 			    		EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation);
 			    		EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
 			    		ea.setObjectiveFunction(evaluator);
@@ -143,7 +145,12 @@ public class ExperimentTester {
 			    			bestEvaluator = taskInfo.evaluator;
 			    		}
 			    	} catch(Exception e){
-			    		
+			    		System.err.println("ERROR: Cannot read thread");
+			    		if (e.getCause() != null) {
+			    			e.getCause().printStackTrace(); 
+			    		} else {
+			    			e.printStackTrace();
+			    		}
 			    	}
 			    }
 			    

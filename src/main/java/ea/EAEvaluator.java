@@ -500,9 +500,9 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    //System.out.println("Simulating...");
 	    
 	    // ONLY FOR DEBUG PURPOSES
-	    automaton.runGUI();
-	    System.out.print("Iteration Completed!");
-	    //automaton.run();
+	    //automaton.runGUI();
+	    //System.out.print("Iteration Completed!");
+	    automaton.run();
 	}
 	
 	/**
@@ -705,7 +705,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	   * @param automaton automaton used
 	   */
 	  private static void GenerateSignOnExits(Scenario scenario, SpecificCellularAutomaton automaton) {
-		System.out.println("Generating permanent signs on exits...");
+		//System.out.println("Generating permanent signs on exits...");
 	    for(Rectangle exit : scenario.exits()) {
 	    	int centerRow = exit.bottom() + (exit.height() / 2);
 	    	int centerCol = exit.left() + (exit.width() / 2);
