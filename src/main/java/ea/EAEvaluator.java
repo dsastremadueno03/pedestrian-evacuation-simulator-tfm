@@ -130,7 +130,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	}
 	
 	// Stores lists of coordinates out of decoding and the penalty for repairing
-	private record DecodedDesign(
+	public record DecodedDesign(
 		    List<Access> trialExits,
 		    List<EphimeralVisualSign> trialTempVisSigns,
 		    List<EvacuationPlanSign> trialPermVisSigns,
@@ -164,6 +164,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			List<Pedestrian> crowd,
 			SimulationMetrics metrics
 			) {}
+	
+	public double getCellDimension() {
+		return this.cellDimension;
+	}
 	
 	/**
 	 * Checks whether an exit can be completely placed in a valid location
@@ -381,8 +385,8 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 							
 			// Translate gene into actual coordinates
 			// Change from scale 0-1 to real size map
-			int row = (int) (geneRow * (mapHeight -1));
-			int col = (int) (geneCol * (mapWidth -1));
+			int row = (int) (geneRow * (mapHeight - 1));
+			int col = (int) (geneCol * (mapWidth - 1));
 			
 			int[] repairedCoordinates = repair(row,col);
 			

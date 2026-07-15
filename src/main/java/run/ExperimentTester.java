@@ -18,8 +18,10 @@ import com.github.cliftonlabs.json_simple.JsonObject;
 import com.github.cliftonlabs.json_simple.Jsoner;
 
 import ea.EAEvaluator;
+import ea.EAEvaluator.DecodedDesign;
 import ea.EAEvaluator.SimulationResult;
 import es.uma.lcc.caesium.ea.base.EvolutionaryAlgorithm;
+import es.uma.lcc.caesium.ea.base.Genotype;
 import es.uma.lcc.caesium.ea.base.Individual;
 import es.uma.lcc.caesium.ea.config.EAConfiguration;
 import es.uma.lcc.caesium.ea.util.JsonUtil;
@@ -34,7 +36,9 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.trace.Coordinates;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.configuration.SimulationConfiguration;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
 import pedestrian.Attacker;
@@ -113,7 +117,7 @@ public class ExperimentTester {
 				    	EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
 				    	double fitness = evaluator.getFitness(infoInRun.metrics());
 				    	
-				    	return new ThreadInfo(runId, fitness, infoInRun);
+				    	return new ThreadInfo(runId, fitness, infoInRun, bestInRun, evaluator);
 			    		
 			    	} ));			    	
 			    }
@@ -124,6 +128,8 @@ public class ExperimentTester {
 			    // Register best run
 			    double bestFitness = Double.MAX_VALUE;
 			    EAEvaluator.SimulationResult bestResult = null;
+			    Individual bestInd = null;
+			    EAEvaluator bestEvaluator = null;
 			    
 			    // Register individual runs
 			    for(Future<ThreadInfo> result : results){
@@ -133,6 +139,8 @@ public class ExperimentTester {
 			    		if(taskInfo.fitness < bestFitness) {
 			    			bestFitness = taskInfo.fitness;
 			    			bestResult = taskInfo.info;
+			    			bestInd = taskInfo.ind;
+			    			bestEvaluator = taskInfo.evaluator;
 			    		}
 			    	} catch(Exception e){
 			    		
@@ -140,7 +148,7 @@ public class ExperimentTester {
 			    }
 			    
 			    if(bestResult != null) {
-			    	saveData(w, idExperiment, bestFitness, bestResult);
+			    	saveData(w, idExperiment, bestFitness, bestResult, bestInd, bestEvaluator);
 			    }
 			   
 			}
@@ -181,7 +189,7 @@ public class ExperimentTester {
 		w.flush();
 	}
 
-	public static void saveData(PrintWriter w, int idExperiment, double fitness, EAEvaluator.SimulationResult info) {
+	public static void saveData(PrintWriter w, int idExperiment, double fitness, EAEvaluator.SimulationResult info, Individual ind, EAEvaluator evaluator) {
 		SpecificCellularAutomaton automaton = info.automaton();
 		EAEvaluator.SimulationMetrics m = info.metrics();
 		List<Pedestrian> crowd = info.crowd();
@@ -247,13 +255,79 @@ public class ExperimentTester {
 		} catch (IOException e) {
 		    e.printStackTrace();
 		}
+		
+		// COORDINATES
+		
+		if(ind != null && evaluator != null) {
+			DecodedDesign bestDesign = evaluator.decode(ind);
+			
+			JsonObject coorJson = new JsonObject();
+			coorJson.put("experiment_id", idExperiment);
+			coorJson.put("fitness", fitness);
+			coorJson.put("total_penalty", bestDesign.repairPenalty());
+			
+			// EXITS
+			JsonArray exitsArray = new JsonArray();
+			for(Access exit : bestDesign.trialExits()) {
+				var bounds = exit.getShape().getAWTShape().getBounds2D();
+				JsonObject coor = new JsonObject();
+				coor.put("X", bounds.getCenterX());
+				coor.put("Y", bounds.getCenterY());
+				exitsArray.add(coor);
+			}
+			coorJson.put("exits", exitsArray);
+			
+			// TEMPORAL SIGNALS
+			JsonArray tempSignalArray = new JsonArray();
+			for(EphimeralVisualSign s : bestDesign.trialTempVisSigns()) {
+				JsonObject coor = new JsonObject();
+				// Convert coordinates to meters (getting middle point of cell)
+				double x = (s.getLocation().column() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				double y = (s.getLocation().row() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				coor.put("X", x);
+				coor.put("Y", y);
+				tempSignalArray.add(coor);
+			}
+			coorJson.put("temporal_signals", tempSignalArray);
+			
+			// PERMANENT SIGNALS
+			JsonArray permSignalArray = new JsonArray();
+			for(EvacuationPlanSign s : bestDesign.trialPermVisSigns()) {
+				JsonObject coor = new JsonObject();
+				// Convert coordinates to meters (getting middle point of cell)
+				double x = (s.getLocation().column() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				double y = (s.getLocation().row() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				coor.put("X", x);
+				coor.put("Y", y);
+				permSignalArray.add(coor);
+			}
+			coorJson.put("permanent_signals", permSignalArray);
+			
+			// POLICE
+			JsonArray policeArray = new JsonArray();
+			for(int[] p : bestDesign.trialPolice()) {
+				JsonObject coor = new JsonObject();
+				// Convert coordinates to meters (getting middle point of cell)
+				double x = (p[1] * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				double y = (p[0] * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				coor.put("X", x);
+				coor.put("Y", y);
+				policeArray.add(coor);
+			}
+			coorJson.put("police", policeArray);
+		
+		
+			// Coordinates stored
+			String coorFileName = "data/traces/coordinates_experiment_" + idExperiment + ".json";
+			try (FileWriter coorWriter = new FileWriter(coorFileName)) {
+				coorWriter.write(Jsoner.prettyPrint(coorJson.toJson()));
+				coorWriter.flush();
+			} catch (IOException e) {
+			    e.printStackTrace();
+			}
+		}
 	}
 	
-	// Distancia puertas, atacantes y policias para optimizar civiles
-	// Para atacantes optimizar distancia de civiles y numero de civiles derribados????
-	// Para policias optimizar distancia civiles y numero de atacantes derribados???
-	
-	// TODO: QUITAR ESTAS FUNCIONES DE AQUÍ
 	/**
 	   * Creates a permanent sign on the center of the exit rectangle, 
 	   * so that pedestrians are attracted.
@@ -272,35 +346,7 @@ public class ExperimentTester {
 	    }
 	  }
 
-	  /**
-	   * Generates the parameter list for Pedestrians
-	   * @param paramJson file with data
-	   * @param PedestrianType adjust parameters to the selected type (0 -> Civ, 1 -> Att, 2 -> Pol)
-	   * @return builder of parameters
-	   */
-	  private static PedestrianWithVisionParameters buildParams(JsonObject paramJson, int PedestrianType) {
-	        double[][] matrix = ExtraJsonParameterLoader.loadSocialWeightsMatrix((JsonArray) paramJson.get("socialMatrix"));
-	        double civilWeight = matrix[PedestrianType][0];
-	        double attackerWeight = matrix[PedestrianType][1];
-	        double policeWeight = matrix[PedestrianType][2];
-
-	        double vision = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("visionRadius"));
-	        double attack = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("attackRadius"));
-	        double greedy = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("greedyProb"));
-	        double inertia = ExtraJsonParameterLoader.readValues((JsonObject) paramJson.get("inertiaWeight"));
-
-	        return new PedestrianWithVisionParameters.Builder()
-	            .civilianWeight(civilWeight)
-	            .attackerWeight(attackerWeight)
-	            .policeWeight(policeWeight)
-	            .visionRadius(vision)
-	            .attackRadius(attack)
-	            .greedyProb(greedy)
-	            .inertiaWeight(inertia)
-	            .build();
-	    }
-	  
-	  private static record ThreadInfo(int runId, double fitness, EAEvaluator.SimulationResult info) {
+	  private static record ThreadInfo(int runId, double fitness, EAEvaluator.SimulationResult info, Individual ind, EAEvaluator evaluator) {
 		  
 	  }
 	  
