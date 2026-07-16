@@ -7,6 +7,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -41,6 +43,7 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.configuration.Simulati
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
+import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
 import pedestrian.MultiPedestrianFactory;
@@ -54,22 +57,48 @@ import signs.EvacuationPlanSign;
 public class ExperimentTester {
 
 	public static void main(String[] args) {
-		
+
 		System.out.println("STARTING...");
 		
-		String resultsCSV = "results.csv";
+		// SYSTEM OF QUEUES
+		File pending = new File("data/experiment/pending");
+		File completed = new File("data/experiment/completed");
 		
-		try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
+		if(!pending.exists()) {
+			pending.mkdirs();
+		}
+		if(!completed.exists()) {
+			completed.mkdirs();
+		}
+		
+		File[] experiments = pending.listFiles((dir, name) -> name.endsWith(".json"));
+		
+		if(experiments == null || experiments.length == 0) {
+			System.err.println("No experiments to run found!");
+		}
+		
+		System.out.printf("Found %d experiments to run", experiments.length);
+		// Experiment
+		for(var exp : experiments) {
+			String prefix = exp.getName().replace(".json", "");
+			String resultsCSV = "data/results_" + prefix + ".csv";
+			System.out.println("Running " + prefix);
+			
+			
+			try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
+			
 			// Header
 			w.println("Experiment id,Run id,Fitness,Civilians Evacuated,Civilians Killed,Civilians Trapped,Attackers Alive,Police Alive,Mean Time,Median Time,Mean Steps,Median Steps,Avg.Dist.Exit,Avg.Dist.Attaker,Avg.Dist.Police");
 			
-			// Read JSON
-			FileReader r = new FileReader("data/experiments.json");
-			JsonObject jsonMain = (JsonObject) Jsoner.deserialize(r);
+			JsonObject jsonMain;
+			try(FileReader r = new FileReader(exp)) {
+				jsonMain = (JsonObject) Jsoner.deserialize(r);
+			}
+			
 			JsonArray listOfExperiments = (JsonArray) jsonMain.get("experiments");
 			String mapPath = jsonMain.get("map").toString();
-			
-			// Experiment
+					
+			// Read JSON
 			for(var obj : listOfExperiments) {
 				JsonObject experiment = (JsonObject) obj;
 				int idExperiment = JsonUtil.getInt(experiment, "id");
@@ -155,14 +184,25 @@ public class ExperimentTester {
 			    }
 			    
 			    if(bestResult != null) {
-			    	saveData(w, idExperiment, bestFitness, bestResult, bestInd, bestEvaluator);
+			    	saveData(w, idExperiment, bestFitness, bestResult, bestInd, bestEvaluator, prefix);
 			    }
 			   
 			}
-		}
-		catch(Exception e) {
+			
+			w.flush();
+			// We move the experiment file to completed
+			File dest = new File(completed, exp.getName());
+			Files.move(exp.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			System.out.println("File completed successfully!");
+			
+		} catch(Exception e) {
+			System.err.println("ERROR: configuration file " + exp.getName() + " had a problem while running!");
 			e.printStackTrace();
 		}
+		
+		}
+		
+		System.out.println("---		FINISHED	---");
 
 	}
 	
@@ -196,7 +236,7 @@ public class ExperimentTester {
 		w.flush();
 	}
 
-	public static void saveData(PrintWriter w, int idExperiment, double fitness, EAEvaluator.SimulationResult info, Individual ind, EAEvaluator evaluator) {
+	public static void saveData(PrintWriter w, int idExperiment, double fitness, EAEvaluator.SimulationResult info, Individual ind, EAEvaluator evaluator, String prefix) {
 		SpecificCellularAutomaton automaton = info.automaton();
 		EAEvaluator.SimulationMetrics m = info.metrics();
 		List<Pedestrian> crowd = info.crowd();
@@ -223,7 +263,7 @@ public class ExperimentTester {
 
 		// Write trace to json file
 		var trace = automaton.getTrace();
-		String fileName = "data/traces/trace_experiment_" + idExperiment + ".json";
+		String fileName = "data/traces/trace_" + prefix + "_experiment_" + idExperiment + ".json";
 		
 		File file = new File(fileName);
 		if (file.getParentFile() != null) {
@@ -254,7 +294,7 @@ public class ExperimentTester {
 		    rolesJson.put(String.valueOf(p.getIdentifier()), rol); 
 		}
 
-		String rolesFileName = "data/traces/roles_experiment_" + idExperiment + ".json";
+		String rolesFileName = "data/traces/roles_" + prefix + "_experiment_" + idExperiment + ".json";
 
 		try (FileWriter rolesWriter = new FileWriter(rolesFileName)) {
 		    rolesWriter.write(Jsoner.prettyPrint(rolesJson.toJson()));
@@ -325,7 +365,7 @@ public class ExperimentTester {
 		
 		
 			// Coordinates stored
-			String coorFileName = "data/traces/coordinates_experiment_" + idExperiment + ".json";
+			String coorFileName = "data/traces/coordinates_" + prefix + "_experiment_" + idExperiment + ".json";
 			try (FileWriter coorWriter = new FileWriter(coorFileName)) {
 				coorWriter.write(Jsoner.prettyPrint(coorJson.toJson()));
 				coorWriter.flush();
@@ -343,7 +383,7 @@ public class ExperimentTester {
 	   * @param automaton automaton used
 	   */
 	  public static void GenerateSignOnExits(Scenario scenario, SpecificCellularAutomaton automaton) {
-		System.out.println("Generating permanent signs on exits...");
+		//System.out.println("Generating permanent signs on exits...");
 	    for(Rectangle exit : scenario.exits()) {
 	    	int centerRow = exit.bottom() + (exit.height() / 2);
 	    	int centerCol = exit.left() + (exit.width() / 2);
