@@ -77,7 +77,7 @@ public class ExperimentTester {
 			System.err.println("No experiments to run found!");
 		}
 		
-		System.out.printf("Found %d experiments to run", experiments.length);
+		System.out.printf("Found %d experiments to run\n", experiments.length);
 		// Experiment
 		for(var exp : experiments) {
 			String prefix = exp.getName().replace(".json", "");

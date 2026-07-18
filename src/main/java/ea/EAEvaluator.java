@@ -298,7 +298,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	}
 	
 	/**
-	 * Decodes an individual from its genome
+	 * Decodes an individual from its genome and applies lamarckian evolution if necessary
 	 * @param i Individual to be decoded
 	 * @return record of lists containing exits, signs and police coordinates
 	 */
@@ -306,26 +306,21 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		Genotype g = i.getGenome(); // Genes from EA
 		int gene = 0; // Index of gene
 		
-		// Stores penalty for reparation
-		double totalPenalty = 0; 
-		
 		// Gene Translation
 		// Exits 
 		List<Access> trialExits = new ArrayList<>();
 		int exitID = 0;
 		for(int j = 0; j < nExits; j++) {
+			int currentGene = gene;
 			double geneInfo = (double) g.getGene(gene);
 			gene++;
 			// Calculates cell over perimeter of map, avoiding precision errors
 			double location = Math.round(geneInfo * eep.getPerimeterLength() * 10) / 10.0;
 			// Check if door is valid and repair it otherwise
 			double repairedLocation = repairExit(location);
-			// If repaired, calculate penalty
+			// If repaired, update genome
 			if(location != repairedLocation) {
-				double diff = Math.abs(repairedLocation - location);
-				// Take minimum error distance
-				double distance = Math.min(eep.getPerimeterLength() - diff, diff);
-				totalPenalty += distance;
+				g.setGene(currentGene, repairedLocation / eep.getPerimeterLength());
 			}
 			
 			// Converts location into real exit (access)
@@ -336,8 +331,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		// Ephimeral Visual Signs
 		List<EphimeralVisualSign> trialTempVisSigns = new ArrayList<>();
 		for(int j = 0; j < nTempSigns; j++) {
+			int currentGeneRow = gene;
 			double geneRow = (double) g.getGene(gene);
 			gene++;
+			int currentGeneCol = gene;
 			double geneCol = (double) g.getGene(gene);
 			gene++;
 			
@@ -348,8 +345,11 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			
 			int[] repairedCoordinates = repair(row,col);
 			
-			// Distance from original coordinates to repaired ones (used as penalty)
-			totalPenalty += Math.abs(row - repairedCoordinates[0]) + Math.abs(col - repairedCoordinates[1]);
+			// If repaired, update genome
+			if(row != repairedCoordinates[0] || col != repairedCoordinates[1]) {
+				g.setGene(currentGeneRow, (double) repairedCoordinates[0] / (mapHeight - 1));
+				g.setGene(currentGeneCol, (double) repairedCoordinates[1] / (mapWidth - 1));
+			}
 			
 			trialTempVisSigns.add(new EphimeralVisualSign(repairedCoordinates[0], repairedCoordinates[1]));
 		}
@@ -357,8 +357,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		// Permanent Visual Signs
 		List<EvacuationPlanSign> trialPermVisSigns = new ArrayList<>();
 		for(int j = 0; j < nPermSigns; j++) {
+			int currentGeneRow = gene;
 			double geneRow = (double) g.getGene(gene);
 			gene++;
+			int currentGeneCol = gene;
 			double geneCol = (double) g.getGene(gene);
 			gene++;
 					
@@ -369,8 +371,11 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			
 			int[] repairedCoordinates = repair(row,col);
 			
-			// Distance from original coordinates to repaired ones (used as penalty)
-			totalPenalty += Math.abs(row - repairedCoordinates[0]) + Math.abs(col - repairedCoordinates[1]);
+			// If repaired, update genome
+			if(row != repairedCoordinates[0] || col != repairedCoordinates[1]) {
+				g.setGene(currentGeneRow, (double) repairedCoordinates[0] / (mapHeight - 1));
+				g.setGene(currentGeneCol, (double) repairedCoordinates[1] / (mapWidth - 1));
+			}
 			
 			trialPermVisSigns.add(new EvacuationPlanSign(repairedCoordinates[0], repairedCoordinates[1]));
 		}
@@ -378,8 +383,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		// Police
 		List<int[]> trialPolice = new ArrayList<>();
 		for(int j = 0; j < nPolice; j++) {
+			int currentGeneRow = gene;
 			double geneRow = (double) g.getGene(gene);
 			gene++;
+			int currentGeneCol = gene;
 			double geneCol = (double) g.getGene(gene);
 			gene++;
 							
@@ -390,14 +397,18 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 			
 			int[] repairedCoordinates = repair(row,col);
 			
-			// Distance from original coordinates to repaired ones (used as penalty)
-			totalPenalty += Math.abs(row - repairedCoordinates[0]) + Math.abs(col - repairedCoordinates[1]);
+			// If repaired, update genome
+			if(row != repairedCoordinates[0] || col != repairedCoordinates[1]) {
+				g.setGene(currentGeneRow, (double) repairedCoordinates[0] / (mapHeight - 1));
+				g.setGene(currentGeneCol, (double) repairedCoordinates[1] / (mapWidth - 1));
+			}
 			
 			trialPolice.add(repairedCoordinates);
 							
 		}
 		
-		return new DecodedDesign(trialExits, trialTempVisSigns, trialPermVisSigns, trialPolice, totalPenalty);
+		// Passed 0 because penalty is not being used for lamarckian evolution
+		return new DecodedDesign(trialExits, trialTempVisSigns, trialPermVisSigns, trialPolice, 0);
 	}
 	
 	/**
