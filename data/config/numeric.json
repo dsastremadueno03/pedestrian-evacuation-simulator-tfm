@@ -1,12 +1,12 @@
 {
-    "numruns" : 5,
+    "numruns" : 1,
     "seed" : 1,
     "islands" : [
         {
             "numislands" : 1,
-            "popsize" : 20,
-            "offspring" : 20,
-            "maxevals" : 220,
+            "popsize" : 10,
+            "offspring" : 9,
+            "maxevals" : 100,
             "initialization" : {
                 "name": "randomvector"
             },
@@ -25,7 +25,7 @@
                 }
             ],
             "replacement" : {
-                "name" : "comma"
+                "name" : "plus"
             }
         }
     ]

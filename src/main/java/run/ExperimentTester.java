@@ -56,7 +56,7 @@ public class ExperimentTester {
 		}
 		
 		String prefix = exp.getName().replace(".json", "");
-		String resultsCSV = "data/results_" + prefix + "_run_" + idRun + ".csv";
+		String resultsCSV = "data/results/results_" + prefix + "_run_" + idRun + ".csv";
 		System.out.println("Running " + prefix);
 			
 			
@@ -114,7 +114,7 @@ public class ExperimentTester {
 			  
 				saveRunCSV(w, idExperiment, idRun, fitness, infoInRun);
 			    		
-			    saveData(w, idExperiment, fitness, infoInRun, bestInRun, evaluator, prefix);
+			    saveData(w, idExperiment, fitness, infoInRun, bestInRun, evaluator, prefix + "_run_" + idRun);
 			    
 			   
 			}

@@ -3,23 +3,18 @@
   "experiments": [
     {
       "id": 1,
+      "comment": "RQ1 - Vision Local SIN senales (Base a ciegas)",
       "seed": 1,
       "numSimulations": 1,
       "simulator": {
-        "timeLimit": 600.0,
+        "timeLimit": 120.0,
         "simulatorType": "CA",
-        "cellularAutomatonParameters": {
-          "cellDimension": 0.4,
-          "neighborhood": "Moore",
-          "floorField": "DijkstraStaticMoore"
-        }
+        "cellularAutomatonParameters": { "cellDimension": 0.4, "neighborhood": "Moore", "floorField": "DijkstraStaticMoore" }
       },
       "crowd": {
         "pedestrianReferenceVelocity": 1.3,
         "numPedestrians": [10.0, 10.0],
-        "attractionBias": [1.0, 1.0],
-        "crowdRepulsion": [1.0, 1.0],
-        "velocityFactor": [1.0, 1.0]
+        "attractionBias": [1.0, 1.0], "crowdRepulsion": [1.0, 1.0], "velocityFactor": [1.0, 1.0]
       },
       "population": {
         "numCivilians": 10, "numAttackers": 0, "numPolice": 0,
@@ -27,8 +22,8 @@
       },
       "environment": {
         "nExits": 3, 
-        "nPermSigns": 3,
-        "nTempSigns": 5
+        "nPermSigns": 0,
+        "nTempSigns": 0
       },
       "weights": {
         "socialMatrix": [
@@ -44,32 +39,27 @@
     },
     {
       "id": 2,
+      "comment": "RQ1 - Vision Local CON senales (Opt. Conjunta)",
       "seed": 1,
       "numSimulations": 1,
       "simulator": {
-        "timeLimit": 600.0,
+        "timeLimit": 120.0,
         "simulatorType": "CA",
-        "cellularAutomatonParameters": {
-          "cellDimension": 0.4,
-          "neighborhood": "Moore",
-          "floorField": "DijkstraStaticMoore"
-        }
+        "cellularAutomatonParameters": { "cellDimension": 0.4, "neighborhood": "Moore", "floorField": "DijkstraStaticMoore" }
       },
       "crowd": {
         "pedestrianReferenceVelocity": 1.3,
-        "numPedestrians": [20.0, 20.0],
-        "attractionBias": [1.0, 1.0],
-        "crowdRepulsion": [1.0, 1.0],
-        "velocityFactor": [1.0, 1.0]
+        "numPedestrians": [10.0, 10.0],
+        "attractionBias": [1.0, 1.0], "crowdRepulsion": [1.0, 1.0], "velocityFactor": [1.0, 1.0]
       },
       "population": {
-        "numCivilians": 10, "numAttackers": 10, "numPolice": 0,
+        "numCivilians": 10, "numAttackers": 0, "numPolice": 0,
         "pChild": 0.1, "pAdult": 0.8, "pElder": 0.1
       },
       "environment": {
         "nExits": 3, 
-        "nPermSigns": 3,
-        "nTempSigns": 5
+        "nPermSigns": 10,
+        "nTempSigns": 30
       },
       "weights": {
         "socialMatrix": [
