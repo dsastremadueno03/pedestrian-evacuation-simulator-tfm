@@ -7,82 +7,57 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-
 import com.github.cliftonlabs.json_simple.JsonArray;
 import com.github.cliftonlabs.json_simple.JsonObject;
 import com.github.cliftonlabs.json_simple.Jsoner;
 
 import ea.EAEvaluator;
 import ea.EAEvaluator.DecodedDesign;
-import ea.EAEvaluator.SimulationResult;
 import es.uma.lcc.caesium.ea.base.EvolutionaryAlgorithm;
-import es.uma.lcc.caesium.ea.base.Genotype;
 import es.uma.lcc.caesium.ea.base.Individual;
 import es.uma.lcc.caesium.ea.config.EAConfiguration;
 import es.uma.lcc.caesium.ea.util.JsonUtil;
 import es.uma.lcc.caesium.pedestrian.evacuation.optimization.ExitEvacuationProblem;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.Statistics;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.floorField.DijkstraStaticFloorFieldWithMooreNeighbourhood;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.neighbourhood.MooreNeighbourhood;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.Scenario;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.RandomScenario;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.scenario.examples.Supermarket;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Rectangle;
-import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.trace.Coordinates;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.configuration.SimulationConfiguration;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
-import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
-import pedestrian.MultiPedestrianFactory;
-import pedestrian.PedestrianWithVisionParameters;
 import pedestrian.Police;
 import pedestrian.PopulationConfig;
-import pedestrian.PopulationGenerator;
 import signs.EphimeralVisualSign;
 import signs.EvacuationPlanSign;
 
 public class ExperimentTester {
 
 	public static void main(String[] args) {
+		
+		// Call structure
+		if(args.length < 3) {
+			System.out.println("STRUCTURE: <experiment_configuration> <ea_configuration> <run_id>");
+			System.exit(1);
+		}
+		
+		String pathExperiment = args[0];
+		String pathEA = args[1];
+		int idRun = Integer.parseInt(args[2]);
 
 		System.out.println("STARTING...");
 		
-		// SYSTEM OF QUEUES
-		File pending = new File("data/experiment/pending");
-		File completed = new File("data/experiment/completed");
-		
-		if(!pending.exists()) {
-			pending.mkdirs();
-		}
-		if(!completed.exists()) {
-			completed.mkdirs();
+		File exp = new File(pathExperiment);
+		if(!exp.exists()) {
+			System.err.println("ERROR: Cannot find file!");
 		}
 		
-		File[] experiments = pending.listFiles((dir, name) -> name.endsWith(".json"));
-		
-		if(experiments == null || experiments.length == 0) {
-			System.err.println("No experiments to run found!");
-		}
-		
-		System.out.printf("Found %d experiments to run\n", experiments.length);
-		// Experiment
-		for(var exp : experiments) {
-			String prefix = exp.getName().replace(".json", "");
-			String resultsCSV = "data/results_" + prefix + ".csv";
-			System.out.println("Running " + prefix);
+		String prefix = exp.getName().replace(".json", "");
+		String resultsCSV = "data/results_" + prefix + "_run_" + idRun + ".csv";
+		System.out.println("Running " + prefix);
 			
 			
 			try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
@@ -115,95 +90,43 @@ public class ExperimentTester {
 				// Initialization
 				random.setSeed(JsonUtil.getInt(experiment, "seed"));
 				    
-			    FileReader reader = new FileReader("data/numeric.json");
+			    FileReader reader = new FileReader(pathEA);
 				EAConfiguration conf = new EAConfiguration((JsonObject) Jsoner.deserialize(reader));
 				
 				// PARALLELISM
-				int runs = conf.getNumRuns();
 				long seed = conf.getSeed();
-				
-				// Setting up
-				int nCores = Runtime.getRuntime().availableProcessors();
-				ExecutorService exec = Executors.newFixedThreadPool(nCores);
-				List<Future<ThreadInfo>> results = new ArrayList<Future<ThreadInfo>>();
-				
-				// num_runs loop
-			    for(int i = 0; i < runs; i++) {
-			    	final int runId = i;
-			    	final long thisSeed = seed + i;
+				long thisSeed = seed + idRun;
 			    	
-			    	// Generates independent threads
-			    	results.add(exec.submit(()->{
-			    		// Scenario from json
-						Environment environment = Environment.fromFile(mapPath);
-					    Domain domain = environment.getDomain(1);
-					    ExitEvacuationProblem eep = new ExitEvacuationProblem(environment, environmentNumbers[0], simulation);	
-			    		EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation);
-			    		EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
-			    		ea.setObjectiveFunction(evaluator);
+			    // Scenario from json
+				Environment environment = Environment.fromFile(mapPath);
+				Domain domain = environment.getDomain(1);
+				ExitEvacuationProblem eep = new ExitEvacuationProblem(environment, environmentNumbers[0], simulation);	
+			    EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation);
+			    EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
+			    ea.setObjectiveFunction(evaluator);
 			    		
-			    		ea.run(thisSeed);
+			    ea.run(thisSeed);
 			    		
-			    		Individual bestInRun = ea.getStatistics().getBest(0); // There is only 1 run in a thread
-				    	EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
-				    	double fitness = evaluator.getFitness(infoInRun.metrics());
-				    	
-				    	return new ThreadInfo(runId, fitness, infoInRun, bestInRun, evaluator);
-			    		
-			    	} ));			    	
-			    }
-				
-			    // Blocks new parallel tasks
-			    exec.shutdown();
+			    Individual bestInRun = ea.getStatistics().getBest(0); // There is only 1 run in a thread
+				EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
+				double fitness = evaluator.getFitness(infoInRun.metrics());
 
-			    // Register best run
-			    double bestFitness = Double.MAX_VALUE;
-			    EAEvaluator.SimulationResult bestResult = null;
-			    Individual bestInd = null;
-			    EAEvaluator bestEvaluator = null;
+			  
+				saveRunCSV(w, idExperiment, idRun, fitness, infoInRun);
+			    		
+			    saveData(w, idExperiment, fitness, infoInRun, bestInRun, evaluator, prefix);
 			    
-			    // Register individual runs
-			    for(Future<ThreadInfo> result : results){
-			    	try {
-			    		ThreadInfo taskInfo = result.get();
-			    		saveRunCSV(w, idExperiment, taskInfo.runId, taskInfo.fitness, taskInfo.info);
-			    		if(taskInfo.fitness < bestFitness) {
-			    			bestFitness = taskInfo.fitness;
-			    			bestResult = taskInfo.info;
-			    			bestInd = taskInfo.ind;
-			    			bestEvaluator = taskInfo.evaluator;
-			    		}
-			    	} catch(Exception e){
-			    		System.err.println("ERROR: Cannot read thread");
-			    		if (e.getCause() != null) {
-			    			e.getCause().printStackTrace(); 
-			    		} else {
-			    			e.printStackTrace();
-			    		}
-			    	}
-			    }
-			    
-			    if(bestResult != null) {
-			    	saveData(w, idExperiment, bestFitness, bestResult, bestInd, bestEvaluator, prefix);
-			    }
 			   
 			}
 			
 			w.flush();
-			// We move the experiment file to completed
-			File dest = new File(completed, exp.getName());
-			Files.move(exp.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			System.out.println("File completed successfully!");
-			
+					
 		} catch(Exception e) {
 			System.err.println("ERROR: configuration file " + exp.getName() + " had a problem while running!");
 			e.printStackTrace();
 		}
-		
-		}
-		
+				
 		System.out.println("---		FINISHED	---");
-
 	}
 	
 	/**
@@ -391,10 +314,6 @@ public class ExperimentTester {
 	    	automaton.addSign(exitSign);
 	    	System.out.println("Exit Sign generated at (" + centerRow + ", " + centerCol + ").");
 	    }
-	  }
-
-	  private static record ThreadInfo(int runId, double fitness, EAEvaluator.SimulationResult info, Individual ind, EAEvaluator evaluator) {
-		  
 	  }
 	  
 }
