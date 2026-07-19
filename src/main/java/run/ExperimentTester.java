@@ -164,7 +164,7 @@ public class ExperimentTester {
 		EAEvaluator.SimulationMetrics m = info.metrics();
 		List<Pedestrian> crowd = info.crowd();
 		
-		
+		/*
 		// Write statistics to csv file
 		w.println(idExperiment + "," +
 				"BEST," +
@@ -183,6 +183,7 @@ public class ExperimentTester {
 				m.avgDistToPol());
 		
 		w.flush();
+		*/
 
 		// Write trace to json file
 		var trace = automaton.getTrace();

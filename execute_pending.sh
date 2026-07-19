@@ -43,7 +43,7 @@ do
 
     # FASE DE UNIFICACIÓN: Consolidar los 20 CSVs temporales
     OUTPUT_MAESTRO="data/results/results_${PREFIX}.csv"
-    TEMP_PREFIX="data/results/results_${PREFIX}_run"
+    TEMP_PREFIX="data/results/results_${PREFIX}_run_"
 
     echo "Unificando archivos en el maestro: $OUTPUT_MAESTRO"
 
