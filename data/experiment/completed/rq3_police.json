@@ -32,7 +32,7 @@
           [ {"min": -5.0, "max": -5.0}, {"min": 10.0, "max": 10.0}, {"min": 0.0, "max": 0.0} ]
         ],
         "visionRadius": {"min": 5.0, "max": 10.0},
-        "attackRadius": {"min": 2.0, "max": 2.5},
+        "attackRadius": {"min": 1.0, "max": 2.5},
         "greedyProb": {"min": 0.7, "max": 0.8},
         "inertiaWeight": {"min": 0.1, "max": 0.2}
       }

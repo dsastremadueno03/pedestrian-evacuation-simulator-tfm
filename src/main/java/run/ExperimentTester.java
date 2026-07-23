@@ -14,6 +14,7 @@ import com.github.cliftonlabs.json_simple.Jsoner;
 
 import ea.EAEvaluator;
 import ea.EAEvaluator.DecodedDesign;
+import ea.EAEvaluator.SimulationResult;
 import es.uma.lcc.caesium.ea.base.EvolutionaryAlgorithm;
 import es.uma.lcc.caesium.ea.base.Individual;
 import es.uma.lcc.caesium.ea.config.EAConfiguration;
@@ -73,7 +74,7 @@ public class ExperimentTester {
 			JsonArray listOfExperiments = (JsonArray) jsonMain.get("experiments");
 			String mapPath = jsonMain.get("map").toString();
 					
-			// Read JSON
+			// Experiment
 			for(var obj : listOfExperiments) {
 				JsonObject experiment = (JsonObject) obj;
 				int idExperiment = JsonUtil.getInt(experiment, "id");
@@ -106,6 +107,20 @@ public class ExperimentTester {
 			    ea.setObjectiveFunction(evaluator);
 			    		
 			    ea.run(thisSeed);
+			    
+			    // Generate the stats for R statistics script
+			    try {
+			    	JsonArray statsJson = (JsonArray) ea.getStatistics().toJSON();
+			    	String statsJsonFile = "data/statistics/numeric-stats-" + prefix + "_exp_" + idExperiment + "_run_" + idRun + ".json";
+
+			    	try (FileWriter wJson = new FileWriter(statsJsonFile)){
+			    		wJson.write(statsJson.toJson());
+			    		wJson.flush();
+			    	}
+			    } catch(Exception e) {
+			    	System.err.println("ERROR: Could not export JSON!");
+			    	e.printStackTrace();
+			    }
 			    		
 			    Individual bestInRun = ea.getStatistics().getBest(0); // There is only 1 run in a thread
 				EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
@@ -127,6 +142,44 @@ public class ExperimentTester {
 		}
 				
 		System.out.println("---		FINISHED	---");
+	}
+	
+	/**
+	 * Saves new metrics added to the project.
+	 * 
+	 * @param prefix Name of group of experiments
+	 * @param idExperiment Number of experiment
+	 * @param idRun Number of current run
+	 * @param fitness Fitness obtained in current run
+	 * @param infoInRun Metrics stored on current run
+	 */
+	public void saveNewMetricsJSON(String prefix, int idExperiment, int idRun, double fitness, SimulationResult infoInRun) {
+		JsonObject metrics = new JsonObject();
+		
+		metrics.put("experiment", idExperiment);
+		metrics.put("run", idRun);
+		metrics.put("fitness", fitness);
+		var m = infoInRun.metrics();
+		metrics.put("civilian_evacuated", m.civEvacuated());
+		metrics.put("civilian_killed", m.civDead());
+		metrics.put("civilian_trapped", m.civTrapped());
+		metrics.put("mean_time", m.meanEvacuationTime());
+		metrics.put("median_time", m.medianEvacuationTime());
+		metrics.put("mean_steps", m.meanSteps());
+		metrics.put("median_steps", m.medianSteps());
+		metrics.put("avg_dist_exit", m.avgDistToExit());
+		metrics.put("avg_dist_attacker", m.avgDistToAtt());
+		metrics.put("avg_dist_police", m.avgDistToPol());
+		
+		String metricsFile = "data/results/result_" + prefix + "_exp_" + idExperiment + "_run_" + idRun + ".json";
+		
+		try (FileWriter wJson = new FileWriter(metricsFile)){
+			wJson.write(metrics.toJson());
+			wJson.flush();
+		} catch(Exception e) {
+			System.err.println("ERROR: Could not export updated metrics JSON!");
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -181,9 +234,10 @@ public class ExperimentTester {
 				m.avgDistToExit() + "," +
 				m.avgDistToAtt() + "," +
 				m.avgDistToPol());
-		
-		w.flush();
 		*/
+		w.println("---------------------------------------------------------------------------");
+		w.flush();
+		
 
 		// Write trace to json file
 		var trace = automaton.getTrace();

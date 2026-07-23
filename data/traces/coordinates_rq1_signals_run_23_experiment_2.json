@@ -1,0 +1,28 @@
+{
+	"exits": [
+		{
+			"X": 44.2,
+			"Y": 0.05
+		},
+		{
+			"X": 49.2,
+			"Y": 44.949999999999996
+		},
+		{
+			"X": 19.6,
+			"Y": 0.05
+		}
+	],
+	"police": [
+		
+	],
+	"experiment_id": 2,
+	"permanent_signals": [
+		
+	],
+	"fitness": 0.5033757509449165,
+	"total_penalty": 0.0,
+	"temporal_signals": [
+		
+	]
+}

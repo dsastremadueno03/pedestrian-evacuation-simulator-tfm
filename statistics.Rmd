@@ -1,0 +1,619 @@
+---
+title: "Trabajo Final 2 --- Algoritmos Evolutivos"
+author: "David Sastre Madueño"
+date: "2026-01-04"
+output: 
+  bookdown::pdf_document2:
+    fig_caption: yes
+    toc: false    
+    extra_dependencies: ["subfig", "amssymb", "amsmath"]
+papersize: a4
+fontsize: 11pt
+geometry:
+  - top=1in
+  - bottom=1in
+  - left=1.5in
+  - right=1.5in
+params: 
+  instances: ["rq1_signals", "rq2_attacker", "rq3_police"]
+  algorithms: ["numeric"]
+  maxevals: 50000
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{r data-preparation}
+library(rjson)
+
+# Parámetros generales
+maxevals <- params$maxevals
+
+# ---  ESCANEO INTELIGENTE MULTI-EXPERIMENTO ---
+# Buscamos todos los archivos aceptando cualquier número de experimento (_exp_X_)
+archivos_existentes <- list.files("data/statistics/", pattern = "-stats-.*_exp_.*_run_.*\\.json")
+
+if (length(archivos_existentes) == 0) {
+  stop("Error: No se ha encontrado ningún archivo JSON en 'data/statistics/'. Revisa la ruta.")
+}
+
+# Regex ampliado para capturar de forma aislada el número de experimento (Grupo 4)
+patron_regex <- "^([^-]+)-stats-(.*?)_exp_(\\d+)_run_\\d+\\.json$"
+matches <- regmatches(archivos_existentes, regexec(patron_regex, archivos_existentes))
+
+# Construimos una tabla de metadatos interna para organizar el inventario de archivos
+meta_files <- data.frame(
+  archivo  = archivos_existentes,
+  alg_base = sapply(matches, function(x) x[2]),
+  instance = sapply(matches, function(x) x[3]),
+  exp_num  = sapply(matches, function(x) x[4]),
+  stringsAsFactors = FALSE
+)
+
+# Creamos el identificador combinado que usará R para las columnas y leyendas gráficos
+meta_files$alg_comb <- paste0(meta_files$alg_base, "_exp", meta_files$exp_num)
+
+# Extraemos las dimensiones reales encontradas en el disco
+algorithms <- unique(meta_files$alg_comb)
+instances <- unique(meta_files$instance)
+
+algorithms <- sort(algorithms)
+instances <- sort(instances)
+
+
+# --- FUNCIONES DE PROCESAMIENTO ---
+
+# Muestreo seguro
+sampling <- function (rundata, s, maxevals) {
+  if (is.null(rundata) || is.null(rundata$evals) || length(rundata$evals) == 0) {
+    numsamples <- floor(maxevals/s)
+    return(matrix(NA, nrow=numsamples, ncol=2))
+  }
+  n = length(rundata$evals)
+  numsamples <- floor(maxevals/s)
+  mat <- matrix(nrow=numsamples, ncol=2)
+  first <- rundata$evals[1]
+  
+  if (length(first) == 0 || is.na(first)) return(matrix(NA, nrow=numsamples, ncol=2))
+
+  i<-1
+  for (j in seq(from = 1, to = numsamples)) {
+    ev <- j * s;
+    mat[j,1] <- ev
+    if (ev < first) {
+      mat[j,2] <- NA
+    } else {
+      while ((i<=n) & (rundata$evals[i] < ev)) {
+        i <- i + 1
+      }
+      if ((i<=n) & (rundata$evals[i] == ev)) {
+        k <- i
+      } else {
+        k <- i - 1
+      }
+      if (k > 0 && k <= length(rundata$data)) {
+        mat[j,2] <- rundata$data[k]
+      } else {
+        mat[j,2] <- NA
+      }
+    }
+  }
+  return (mat)
+} 
+
+# Error estándar
+stderror <- function(x) {
+  x <- na.omit(x)
+  if(length(x) == 0) return(NA)
+  sd(x)/sqrt(length(x))
+}
+
+# Agregación de matrices
+statmat <- function(lst, fnc) {        
+  if (length(lst) == 0) return(NULL)
+  rc <- dim(lst[[1]]) 
+  if (is.null(rc)) return(NULL)
+  ar1 <- array(unlist(lst), c(rc, length(lst))) 
+  mat <- apply(ar1, c(1, 2), fnc)
+  colnames(mat)=c("evals", "best", "current", "mean", "diversity")
+  return(mat)
+}
+
+# Procesa una ejecución individual
+process_rundata <- function (rundata) {
+  s <- 100
+  if (is.null(rundata$isols) || is.null(rundata$idata)) {
+    dummy_evals <- seq(s, maxevals, by=s)
+    mat_dummy <- matrix(NA, nrow=length(dummy_evals), ncol=5)
+    colnames(mat_dummy) <- c("evals", "best", "current", "mean", "diversity")
+    return(mat_dummy)
+  }
+  df <- data.frame("evals" = rundata$isols$evals, "data" = rundata$isols$fitness)
+  mat1 <- sampling(df, s, maxevals)
+  
+  df <- data.frame("evals" = rundata$idata$evals, "data" = rundata$idata$best)
+  mat2 <- sampling(df, s, maxevals)
+  mat1 <- cbind(mat1, mat2[,2])
+  
+  df <- data.frame("evals" = rundata$idata$evals, "data" = rundata$idata$mean)
+  mat2 <- sampling(df, s, maxevals)
+  mat1 <- cbind(mat1, mat2[,2])
+  
+  df <- data.frame("evals" = rundata$idata$evals, "data" = rundata$idata$diversity)
+  mat2 <- sampling(df, s, maxevals)
+  mat1 <- cbind(mat1, mat2[,2])
+  
+  colnames(mat1) <- c("evals", "best", "current", "mean", "diversity")  
+  return (mat1)
+}
+
+# Procesa un lote de ejecuciones (runs)
+process_runbatch <- function (data) {
+  if (is.null(data) || length(data) == 0) return(NULL)
+  stats <- list()
+  numislands <- length(data[[1]]$rundata)
+  numruns <- length(data)
+  resbestall <- NULL
+  
+  for (i in seq(1, numruns)) {
+    runmat <- process_rundata(data[[i]]$rundata[[1]])
+    if (i == 1) resbestall <- data.frame("evals" = runmat[,"evals"])
+    if (numislands > 1) {
+      for (j in seq(2, numislands)) {
+        mat <- process_rundata(data[[i]]$rundata[[j]])
+        runmat[,"current"] <- pmax(runmat[,"current"], mat[,"current"], na.rm=TRUE)
+        runmat[,"best"] <- pmax(runmat[,"best"], mat[,"best"], na.rm=TRUE)
+        runmat[,"mean"] <- runmat[,"mean"] + mat[,"mean"]
+        runmat[,"diversity"] <- runmat[,"diversity"] + mat[,"diversity"]
+      }
+      runmat[,"mean"] <- runmat[,"mean"]/numislands
+      runmat[,"diversity"] <- runmat[,"diversity"]/numislands
+    }
+    stats[[i]] <- runmat
+    if (!is.null(resbestall)) resbestall[paste0("run", i)] <- runmat[,"best"]
+  }
+  resmean <- as.data.frame(statmat(stats, function(x) mean(x, na.rm=TRUE)))
+  resse <- as.data.frame(statmat(stats, stderror))
+  return (list("mean"=resmean, "se"=resse, "all" = resbestall))
+}
+
+# Extrae soluciones finales
+get_solutions <- function (data) {
+  if (is.null(data) || length(data) == 0) return(NULL)
+  numruns <- length(data)
+  
+  genome_sample <- NULL
+  if(!is.null(data[[1]]$rundata[[1]]$isols$genome)) {
+      genome_sample <- data[[1]]$rundata[[1]]$isols$genome
+  }
+  
+  numvar <- if (is.null(genome_sample)) 0 else length(genome_sample[[1]])
+  
+  table_solutions <- data.frame(matrix(ncol=numvar+2, nrow=numruns))
+  colnames(table_solutions) <- c("evals", "fitness", paste("V", seq_len(numvar), sep=""))
+  
+  for (i in 1:numruns) {
+    isols <- data[[i]]$rundata[[1]]$isols
+    if (!is.null(isols) && length(isols$evals) > 0) {
+      rowi <- max(which(isols$evals < maxevals))
+      if (is.infinite(rowi)) rowi <- length(isols$evals)
+      table_solutions[i, "evals"] <- isols$evals[rowi]
+      table_solutions[i, "fitness"] <- isols$fitness[rowi]
+      if (numvar > 0) {
+        for (j in seq_len(numvar)) {
+          table_solutions[i, j+2] <- isols$genome[rowi][[1]][j]
+        }
+      }
+    }
+  }
+  return(table_solutions)
+}
+
+
+# --- CARGA MAPEADA EN MATRIZ DUAL ---
+data_list <- vector("list", length(instances) * length(algorithms))
+idx <- 1
+
+for (instance in instances) {
+  for (alg in algorithms) {
+    batch_data <- list()
+    run_count <- 1
+    
+    # Localizamos qué algoritmo base y número de experimento corresponden a este bloque
+    sub_meta <- meta_files[meta_files$instance == instance & meta_files$alg_comb == alg, ]
+    
+    if (nrow(sub_meta) > 0) {
+      alg_base_actual <- sub_meta$alg_base[1]
+      exp_num_actual <- sub_meta$exp_num[1]
+      
+      # Cargamos los 20 runs correspondientes a este experimento concreto
+      for (r in 0:19) {
+        json_filename <- paste0("data/statistics/", alg_base_actual, "-stats-", instance, "_exp_", exp_num_actual, "_run_", r, ".json")
+        
+        if (file.exists(json_filename)) {
+          json_run <- tryCatch(fromJSON(file = json_filename), error = function(e) NULL)
+          if (!is.null(json_run) && length(json_run) > 0) {
+            batch_data[[run_count]] <- json_run[[1]]
+            run_count <- run_count + 1
+          }
+        }
+      }
+    }
+    
+    if (length(batch_data) > 0) {
+      processed <- process_runbatch(batch_data)
+      sols <- get_solutions(batch_data)
+      data_list[[idx]] <- list("rundata" = processed, "sols" = sols)
+    } else {
+      data_list[[idx]] <- NA 
+    }
+    idx <- idx + 1
+  }
+}
+
+data_processed <- matrix(data = data_list, ncol = length(instances),
+                         dimnames = list(algorithms, instances))
+
+# Escapamos los nombres de las instancias para el paracaídas de LaTeX
+instances_escaped <- gsub("_", "\\\\_", instances)
+
+# Limpieza profunda de temporales
+rm(list=c("data_list", "batch_data", "archivos_existentes", "patron_regex", "matches", "meta_files", "sub_meta"))
+```
+# Introducción
+
+El problema de asignación de frecuencias (FAP) surge del desarrollo y crecimiento actual de las señales y conexiones inalámbricas. Debido a este crecimiento y al límite de frecuencias asignable, es crucial administrar de forma eficiente la asignación de frecuencias a las diferentes emisoras. 
+
+El objetivo del problema es asignar un conjunto de frecuencias a una colección de emisoras repartidas geográficamente, de tal forma que se garantice el cumplimiento de las demandas de comunicación, a la vez que el cumplimiento de las restricciones de impuestas para evitar interferencias.
+
+Debido a la complejidad del problema por generar un espacio de búsqueda enorme, se ha tenido que emplear un algoritmo evolutivo para encontrar una solución subóptima al problema, ya que una solución óptima exacta sería demasiado compleja de encontrar en tamaños de problema medios o grandes (NP-duro).
+
+La formalización del problema es la siguiente:
+
+Consideramos un conjunto de $n$ emisoras denotado por $\mathcal{E}=\{e_{1},...,e_{n}\}$. Cada emisora $e_{i} \in \mathcal{E}$ está caracterizada por una tupla $(id_{i}, \mathbf{p}_i, d_{i})$, donde:
+
+* $id_{i}$ es el identificador único de la emisora.
+* $\mathbf{p}_i = (x_{i}, y_{i}, z_{i})$ representa su posición espacial en el entorno geográfico.
+* $d_{i}$ es la demanda de frecuencias (número de canales necesarios) para dicha emisora.
+
+El espectro disponible se modela como un conjunto de números naturales $\Phi=\{0,1,2,...\}$, donde cada número representa una banda de frecuencia.
+
+El problema consiste en encontrar una asignación de frecuencias $\Psi=\{\psi_{1},...,\psi_{n}\}$, donde cada $\psi_{i}$ es un conjunto de frecuencias asignadas a la emisora $e_i$ ($\psi_i \subset \Phi$), tal que se cumplan las siguientes condiciones:
+
+Cada emisora debe recibir exactamente el número de frecuencias solicitado:
+    \begin{equation}
+    \forall i \in \{1...n\} : |\psi_{i}| = d_{i}
+    \end{equation}
+
+Para cualquier par de frecuencias asignadas (ya sea en la misma emisora o en emisoras distintas), si la separación espectral es insuficiente dada la distancia física, se produce una violación. Formalmente, la asignación válida debe cumplir:
+    \begin{equation}
+    \forall i,j \in \{1...n\}, \forall f_{1} \in \psi_{i}, \forall f_{2} \in \psi_{j} : ((i \neq j) \lor (f_{1} \neq f_{2})) \Rightarrow \text{dist}(e_{i},e_{j}) \ge \delta(|f_{1}-f_{2}|)
+    \end{equation}
+
+El objetivo del problema tratado en este trabajo es minimizar el ancho de banda total utilizado, definido como el rango $r(\Psi)$ de las frecuencias empleadas:
+
+\begin{equation}
+\text{Minimizar } r(\Psi) = \max_{1\le i\le n}(\max_{f\in\psi_{i}}f) - \min_{1\le i\le n}(\min_{f\in\psi_{i}}f)
+\end{equation}
+
+# Resultados
+
+
+```{r fitness-evol, fig.cap = "Evolución de fitness promediada", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
+library(ggplot2)
+library(scales)
+
+for (instance in instances) {
+  has_data <- FALSE
+  for (alg in algorithms) {
+    if (is.list(data_processed[[alg, instance]])) has_data = TRUE
+  }
+  
+  if (has_data) {
+    may <- 0; miy <- Inf
+    for (alg in algorithms) {
+      if (is.list(data_processed[[alg, instance]])) {
+        val_mean <- data_processed[[alg, instance]]$rundata$mean$best
+        val_se <- data_processed[[alg, instance]]$rundata$se$best
+        if (!is.null(val_mean)) {
+          val_top <- (val_mean + val_se)
+          val_bot <- (val_mean - val_se)
+          val_top <- val_top[is.finite(val_top)]
+          val_bot <- val_bot[is.finite(val_bot)]
+          
+          if(length(val_top) > 0) may <- max(may, max(val_top), na.rm=TRUE)
+          if(length(val_bot) > 0) miy <- min(miy, min(val_bot), na.rm=TRUE)
+        }
+      }
+    }
+    
+    # 🛡️ Suelo de seguridad: si baja de 1e-4 o es 0, fijamos el límite en 1e-4 
+    # para que la escala log10 no crashee y permita ver la unidad E-4 perfectamente.
+    if (miy <= 0 || miy < 1e-4) {
+      miy <- 1e-4
+    }
+    if (may <= miy) {
+      may <- miy * 10
+    }
+    
+    df_plot <- data.frame()
+    for (alg in algorithms) {
+      if (is.list(data_processed[[alg, instance]])) {
+        rd <- data_processed[[alg, instance]][["rundata"]]
+        if (!is.null(rd$mean)) {
+           temp <- data.frame(
+             evals = rd[["mean"]]$evals,
+             best = rd[["mean"]]$best,
+             se = rd[["se"]]$best,
+             alg = alg
+           )
+           # Ajustamos los valores del dataframe al suelo mínimo para evitar distorsiones logarítmicas
+           temp$best[temp$best < 1e-4] <- 1e-4
+           df_plot <- rbind(df_plot, temp)
+        }
+      }
+    }
+    
+    if (nrow(df_plot) > 0) {
+      p <- ggplot(data=df_plot, aes(x=evals, color = alg, group = alg)) + 
+        geom_line(aes(y=best)) +
+        geom_point(aes(y=best), size=2) + 
+        geom_ribbon(aes(ymin=pmax(best-se, 1e-4), ymax=best+se), fill='black', alpha=0.2) +
+        coord_cartesian(ylim=c(miy, may)) +
+        xlab("Evaluaciones") + ylab("Fitness") + 
+        scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) + # 🎯 Escala logarítmica con formato X.XXE-X
+        ggtitle(instance) + theme_bw() + labs(color = "") + 
+        theme(aspect.ratio=1, legend.position = "bottom")
+      show(p)
+    }
+  }
+}
+```
+
+
+
+```{r diversity-evol, fig.cap = "Evolución de la diversidad promediada sobre todas las ejecuciones", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
+library(ggplot2)
+library(scales)
+
+for (instance in instances) {
+  has_data <- FALSE
+  # Comprobamos si al menos un algoritmo tiene datos para esta instancia
+  for (alg in algorithms) {
+    if (is.list(data_processed[[alg, instance]])) has_data <- TRUE
+  }
+  
+  if (has_data) {
+    may <- 0 
+    miy <- Inf
+    
+    # 1. Cálculo seguro y acotado de los límites del eje Y
+    for (alg in algorithms) {
+      if (is.list(data_processed[[alg, instance]])) {
+        rd <- data_processed[[alg, instance]]$rundata
+        if (!is.null(rd) && !is.null(rd$mean$diversity)) {
+          val_top <- rd$mean$diversity + rd$se$diversity
+          val_bot <- rd$mean$diversity - rd$se$diversity
+          val_top <- val_top[is.finite(val_top)]
+          val_bot <- val_bot[is.finite(val_bot)]
+          
+          if (length(val_top) > 0) may <- max(may, max(val_top), na.rm=TRUE)
+          if (length(val_bot) > 0) miy <- min(miy, min(val_bot), na.rm=TRUE)
+        }
+      }
+    }
+    
+    # Paracaídas de seguridad si la diversidad máxima y mínima coinciden (tests cortos)
+    if (miy == may) {
+      miy <- miy - 0.1
+      may <- may + 0.1
+    }
+    
+    # 2. Construcción dinámica del dataframe (inmune a celdas vacías o NAs)
+    df_plot <- data.frame()
+    for (alg in algorithms) {
+      if (is.list(data_processed[[alg, instance]])) {
+        rd <- data_processed[[alg, instance]][["rundata"]]
+        if (!is.null(rd) && !is.null(rd$mean)) {
+           temp <- data.frame(
+             evals = rd[["mean"]]$evals,
+             diversity = rd[["mean"]]$diversity,
+             se = rd[["se"]]$diversity,
+             alg = alg
+           )
+           df_plot <- rbind(df_plot, temp)
+        }
+      }
+    }
+      
+    # 3. Renderizado del gráfico mediante ggplot
+    if (nrow(df_plot) > 0) {
+      p <- ggplot(data=df_plot, aes(x=evals, color = alg, group = alg)) + 
+        geom_line(aes(y=diversity)) +
+        geom_point(aes(y=diversity), size=2) + # Muestra el punto claramente en ejecuciones cortas
+        geom_ribbon(aes(ymin=diversity-se, ymax=diversity+se), fill='black', alpha=0.2) +
+        coord_cartesian(ylim=c(miy, may)) +
+        xlab("Número de Evaluaciones") +
+        ylab("Diversidad") +
+        ggtitle(instance) +
+        theme_bw() + 
+        labs(color = "") + 
+        theme(aspect.ratio=1, legend.position = "bottom")
+      show(p)
+    }
+  }
+}
+
+# Limpieza segura de variables locales
+rm(list = c("df_plot"))
+```
+
+```r
+```{r solutions, fig.cap = "Comparativa de eficiencia: Distribución de fitness final (Menor es mejor)", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
+library(ggplot2)
+library(scales)
+
+for (instance in instances) {
+  df_boxplot <- data.frame()
+  has_data <- FALSE
+  
+  for (alg in algorithms) {
+    if (is.list(data_processed[[alg, instance]])) {
+      sols <- data_processed[[alg, instance]][["sols"]]
+      
+      if (!is.null(sols) && !is.null(sols$fitness) && length(sols$fitness) > 0) {
+        # Aplicamos el suelo protector en los datos en bruto del boxplot
+        safe_fitness <- sols$fitness
+        safe_fitness[safe_fitness < 1e-4] <- 1e-4
+        
+        df_boxplot <- rbind(df_boxplot, data.frame(Operador = alg, Fitness = safe_fitness))
+        has_data <- TRUE
+      }
+    }
+  }
+  
+  if (has_data && nrow(df_boxplot) > 0) {
+    p <- ggplot(df_boxplot, aes(x = Operador, y = Fitness, fill = Operador)) +
+      geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+      geom_jitter(width = 0.2, alpha = 0.5, color="black") +
+      labs(title = paste("Instancia:", instance),
+           subtitle = "Distribución del fitness final entre ejecuciones",
+           x = "Algoritmo / Operador",
+           y = "Fitness Final") +
+      theme_bw() + 
+      scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) + # Misma escala científica y logarítmica
+      theme(aspect.ratio = 0.8, legend.position = "none")
+    show(p)
+  }
+}
+```
+
+
+
+```{r fitness}
+num_instances <- length(instances)
+num_algorithms <- length(algorithms)
+
+# Función de Wilcoxon protegida contra datos ausentes o insuficientes
+getPval <- function(instance, alg1, alg2) {
+  if (!is.list(data_processed[[alg1, instance]]) || !is.list(data_processed[[alg2, instance]])) {
+    return(1)
+  }
+  v1 <- data_processed[[alg1, instance]][["sols"]]$fitness
+  v2 <- data_processed[[alg2, instance]][["sols"]]$fitness
+  
+  if (is.null(v1) || is.null(v2) || length(v1) < 2 || length(v2) < 2) {
+    return(1)
+  }
+  
+  # Paracaídas si las varianzas son cero para evitar avisos y errores en el test
+  if (var(v1, na.rm=TRUE) == 0 && var(v2, na.rm=TRUE) == 0) {
+    return(1)
+  }
+  
+  s <- tryCatch(wilcox.test(v1, v2, alternative = "two.sided"), error = function(e) list(p.value=1))
+  if (is.na(s$p.value)) {
+    s$p.value <- 1
+  }
+  return(s$p.value)
+}
+
+# Función de símbolos protegida
+getSymbol <- function (alg, instance) {
+  if (is.na(bestalg[instance]) || is.null(bestalg[instance])) {
+    return ("$\\phantom{\\bullet}$")
+  }
+  if (alg == bestalg[instance]) {
+    return ("$\\star$")
+  }
+  pval <- table_significance[instance, alg]
+  if (is.na(pval) || pval > 0.05) {
+    return ("$\\phantom{\\bullet}$")
+  } else {
+    return ("$\\bullet$")
+  }
+}
+
+table_significance <- data.frame(matrix(nrow=num_instances, ncol=num_algorithms))
+colnames(table_significance) <- algorithms
+rownames(table_significance) <- instances
+
+# Corrección 1: Usamos un vector con nombres para garantizar estabilidad en las comparaciones
+bestalg <- rep(NA_character_, num_instances)
+names(bestalg) <- instances
+
+# Buscamos el mejor algoritmo protegiendo las celdas sin datos reales
+for (instance in instances) {
+  best <- Inf
+  for (alg in algorithms) {
+    if (is.list(data_processed[[alg, instance]])) {
+      sols <- data_processed[[alg, instance]][["sols"]]
+      if (!is.null(sols) && !is.null(sols$fitness) && length(sols$fitness) > 0) {
+        val <- mean(sols$fitness, na.rm=TRUE)
+        if (!is.na(val) && val < best) {
+          best <- val
+          bestalg[instance] <- alg
+        }
+      }
+    }
+  }
+  
+  for (alg in algorithms) {
+    if (!is.na(bestalg[instance])) {
+      table_significance[instance, alg] <- getPval(instance, alg, bestalg[instance])
+    } else {
+      table_significance[instance, alg] <- 1
+    }
+  }
+}
+
+library(kableExtra)
+
+prec <- 3
+
+table_fitness <- data.frame(matrix(nrow=num_instances, ncol=4*num_algorithms))
+colnames(table_fitness) <- apply(expand.grid(c("best", "median", "mean", "stat"), algorithms), 
+                                 1, paste, collapse = ".")
+rownames(table_fitness) <- instances
+
+first_header <- c(1, rep(4, num_algorithms))
+names(first_header) <- c(" ", algorithms)
+
+second_header <- rep(1, 1 + num_algorithms * 4)
+names(second_header) <- c("instancia", rep(c("$x^*$", "$\\tilde{x}$", 
+                                             "$\\bar{x} \\pm \\sigma_{\\bar{x}}$", " "), num_algorithms))
+
+# Rellenamos la tabla final esquivando las celdas sin datos
+for (alg in algorithms) {
+  for (instance in instances) {
+    if (is.list(data_processed[[alg, instance]])) {
+      data_solutions <- data_processed[[alg, instance]][["sols"]]
+      if (!is.null(data_solutions) && !is.null(data_solutions$fitness) && length(data_solutions$fitness) > 0) {
+        table_fitness[instance, paste("best", alg, sep=".")] <- round(min(data_solutions$fitness, na.rm=TRUE), prec)
+        table_fitness[instance, paste("median", alg, sep=".")] <- round(median(data_solutions$fitness, na.rm=TRUE), prec)
+        table_fitness[instance, paste("mean", alg, sep=".")] <- paste(round(mean(data_solutions$fitness, na.rm=TRUE), prec), "$\\pm$", round(stderror(data_solutions$fitness), prec))
+        table_fitness[instance, paste("stat", alg, sep=".")] <- getSymbol(alg, instance)
+        next
+      }
+    }
+    table_fitness[instance, paste("best", alg, sep=".")] <- "-"
+    table_fitness[instance, paste("median", alg, sep=".")] <- "-"
+    table_fitness[instance, paste("mean", alg, sep=".")] <- "N/A"
+    table_fitness[instance, paste("stat", alg, sep=".")] <- " "
+  }
+}
+
+# MANDATORIO: Escapamos los guiones bajos (_) en las filas y cabeceras para que LaTeX no crashee
+rownames(table_fitness) <- gsub("_", "\\\\_", rownames(table_fitness))
+names(first_header) <- gsub("_", "\\\\_", names(first_header))
+
+# Renderizado seguro de la tabla en el PDF
+table_fitness %>%
+  kbl(escape = FALSE,
+      booktabs = T, 
+      caption = "Resultados globales de las simulaciones. Cada columna muestra el mejor valor encontrado ($x^*$), la mediana ($\\tilde{x}$), la media ($\\bar{x}$) y el error estándar de la media ($\\sigma_{\\bar{x}}$). Una estrella $\\star$ marca al mejor algoritmo en cada instancia, y un símbolo $\\bullet$ indica significación estadística.",
+      col.names=names(second_header)) %>%
+kable_styling(full_width = F, latex_options="scale_down") %>%
+add_header_above(first_header)
+```

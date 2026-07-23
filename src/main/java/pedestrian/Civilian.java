@@ -25,7 +25,14 @@ public class Civilian extends PedestrianWithVision {
 		public Civilian(int row, int column, PedestrianWithVisionParameters parameters, CellularAutomaton automaton, Age ageGroup){
 			super(row, column, parameters, automaton);
 			this.ageGroup = ageGroup;
+			// If negative vision radius, set vision to positive to avoid walls and active heat map to mimic "infinite sight" (For experiment)
+			if(visionRadius < 0) {
+				this.visionRadius = Math.abs(visionRadius);
+				permanentExitKnown = true;
+			} 
+			else {
 			permanentExitKnown = false;
+			}
 			temporalExitKnown = false;
 		}
 		
