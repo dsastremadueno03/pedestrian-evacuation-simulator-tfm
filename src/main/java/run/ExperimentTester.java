@@ -144,6 +144,32 @@ public class ExperimentTester {
 			    
 			    double avgFitness = Descriptive.mean(fitnesses);
 			    
+			    // EXPORT SIMULATIONS
+			    try {
+			    	JsonArray testSimsJson = new JsonArray();
+			    	for(double f : fitnesses) {
+			    		testSimsJson.add(f);
+			    	}
+			    	
+			    	JsonObject testOutJson = new JsonObject();
+			    	testOutJson.put("idExperiment", idExperiment);
+			    	testOutJson.put("idRun", idRun);
+			    	testOutJson.put("avgFitness", avgFitness);
+			    	testOutJson.put("testSimulations", testSimsJson);
+			    	
+			    	// Write it in file
+			    	String testJsonFile = "data/simulations/test-stats-" + prefix + "_exp_" + idExperiment + "_run_" + idRun + ".json";
+			    	try (FileWriter wJson = new FileWriter(testJsonFile)){
+			    		wJson.write(testOutJson.toJson());
+			    		wJson.flush();
+			    	}
+			    	
+			    } catch(Exception e) {
+			    	System.err.println("ERROR: Could not export test simulations to JSON!");
+			    	e.printStackTrace();
+			    }
+			    
+			    
 			    // We look for the median fitness simulation
 			    int repIndex = 0;
 			    double minDiff = Double.MAX_VALUE;
