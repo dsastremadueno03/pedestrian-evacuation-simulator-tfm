@@ -187,6 +187,8 @@ public class ExperimentTester {
 			    Random.random.setSeed(repSeed);
 			    EAEvaluator.SimulationResult repInfo = evaluator.getSimulation(bestInRun);
 
+				saveNewMetricsJSON(prefix, idExperiment, idRun, avgFitness, repInfo);
+				
 				saveRunCSV(w, idExperiment, idRun, avgFitness, repInfo);
 			    		
 			    saveData(w, idExperiment, avgFitness, repInfo, bestInRun, evaluator, prefix + "_run_" + idRun);
@@ -213,7 +215,7 @@ public class ExperimentTester {
 	 * @param fitness Fitness obtained in current run
 	 * @param infoInRun Metrics stored on current run
 	 */
-	public void saveNewMetricsJSON(String prefix, int idExperiment, int idRun, double fitness, SimulationResult infoInRun) {
+	public static void saveNewMetricsJSON(String prefix, int idExperiment, int idRun, double fitness, SimulationResult infoInRun) {
 		JsonObject metrics = new JsonObject();
 		
 		metrics.put("experiment", idExperiment);

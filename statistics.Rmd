@@ -17,7 +17,7 @@ geometry:
 params: 
   instances: ["rq1_signals", "rq2_attacker", "rq3_police"]
   algorithms: ["numeric"]
-  maxevals: 50000
+  maxevals: 2500
 ---
 
 ```{r setup, include=FALSE}
@@ -261,46 +261,11 @@ instances_escaped <- gsub("_", "\\\\_", instances)
 # Limpieza profunda de temporales
 rm(list=c("data_list", "batch_data", "archivos_existentes", "patron_regex", "matches", "meta_files", "sub_meta"))
 ```
-# Introducción
-
-El problema de asignación de frecuencias (FAP) surge del desarrollo y crecimiento actual de las señales y conexiones inalámbricas. Debido a este crecimiento y al límite de frecuencias asignable, es crucial administrar de forma eficiente la asignación de frecuencias a las diferentes emisoras. 
-
-El objetivo del problema es asignar un conjunto de frecuencias a una colección de emisoras repartidas geográficamente, de tal forma que se garantice el cumplimiento de las demandas de comunicación, a la vez que el cumplimiento de las restricciones de impuestas para evitar interferencias.
-
-Debido a la complejidad del problema por generar un espacio de búsqueda enorme, se ha tenido que emplear un algoritmo evolutivo para encontrar una solución subóptima al problema, ya que una solución óptima exacta sería demasiado compleja de encontrar en tamaños de problema medios o grandes (NP-duro).
-
-La formalización del problema es la siguiente:
-
-Consideramos un conjunto de $n$ emisoras denotado por $\mathcal{E}=\{e_{1},...,e_{n}\}$. Cada emisora $e_{i} \in \mathcal{E}$ está caracterizada por una tupla $(id_{i}, \mathbf{p}_i, d_{i})$, donde:
-
-* $id_{i}$ es el identificador único de la emisora.
-* $\mathbf{p}_i = (x_{i}, y_{i}, z_{i})$ representa su posición espacial en el entorno geográfico.
-* $d_{i}$ es la demanda de frecuencias (número de canales necesarios) para dicha emisora.
-
-El espectro disponible se modela como un conjunto de números naturales $\Phi=\{0,1,2,...\}$, donde cada número representa una banda de frecuencia.
-
-El problema consiste en encontrar una asignación de frecuencias $\Psi=\{\psi_{1},...,\psi_{n}\}$, donde cada $\psi_{i}$ es un conjunto de frecuencias asignadas a la emisora $e_i$ ($\psi_i \subset \Phi$), tal que se cumplan las siguientes condiciones:
-
-Cada emisora debe recibir exactamente el número de frecuencias solicitado:
-    \begin{equation}
-    \forall i \in \{1...n\} : |\psi_{i}| = d_{i}
-    \end{equation}
-
-Para cualquier par de frecuencias asignadas (ya sea en la misma emisora o en emisoras distintas), si la separación espectral es insuficiente dada la distancia física, se produce una violación. Formalmente, la asignación válida debe cumplir:
-    \begin{equation}
-    \forall i,j \in \{1...n\}, \forall f_{1} \in \psi_{i}, \forall f_{2} \in \psi_{j} : ((i \neq j) \lor (f_{1} \neq f_{2})) \Rightarrow \text{dist}(e_{i},e_{j}) \ge \delta(|f_{1}-f_{2}|)
-    \end{equation}
-
-El objetivo del problema tratado en este trabajo es minimizar el ancho de banda total utilizado, definido como el rango $r(\Psi)$ de las frecuencias empleadas:
-
-\begin{equation}
-\text{Minimizar } r(\Psi) = \max_{1\le i\le n}(\max_{f\in\psi_{i}}f) - \min_{1\le i\le n}(\min_{f\in\psi_{i}}f)
-\end{equation}
 
 # Resultados
 
 
-```{r fitness-evol, fig.cap = "Evolución de fitness promediada", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
+```{r fitness-evol, fig.cap = "Evolución de fitness promediada (30 ejecuciones y 10 simulaciones por ejecución)", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
 library(ggplot2)
 library(scales)
 
@@ -328,7 +293,7 @@ for (instance in instances) {
       }
     }
     
-    # 🛡️ Suelo de seguridad: si baja de 1e-4 o es 0, fijamos el límite en 1e-4 
+    # Suelo de seguridad: si baja de 1e-4 o es 0, fijamos el límite en 1e-4 
     # para que la escala log10 no crashee y permita ver la unidad E-4 perfectamente.
     if (miy <= 0 || miy < 1e-4) {
       miy <- 1e-4
@@ -362,7 +327,7 @@ for (instance in instances) {
         geom_ribbon(aes(ymin=pmax(best-se, 1e-4), ymax=best+se), fill='black', alpha=0.2) +
         coord_cartesian(ylim=c(miy, may)) +
         xlab("Evaluaciones") + ylab("Fitness") + 
-        scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) + # 🎯 Escala logarítmica con formato X.XXE-X
+        scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) + # Escala logarítmica con formato X.XXE-X
         ggtitle(instance) + theme_bw() + labs(color = "") + 
         theme(aspect.ratio=1, legend.position = "bottom")
       show(p)
@@ -371,85 +336,306 @@ for (instance in instances) {
 }
 ```
 
+```{r test-data-preparation, echo=FALSE, message=FALSE, warning=FALSE}
+library(jsonlite)
+library(dplyr)
 
+# Cargamos todos los archivos de testing del disco
+test_files <- list.files("data/simulations/", pattern = "^test-stats-.*_exp_.*_run_.*\\.json$")
 
-```{r diversity-evol, fig.cap = "Evolución de la diversidad promediada sobre todas las ejecuciones", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
+df_testing <- data.frame()
+
+if (length(test_files) > 0) {
+  df_testing <- do.call(rbind, lapply(test_files, function(f) {
+    filepath <- paste0("data/simulations/", f)
+    json_data <- tryCatch(fromJSON(filepath), error = function(e) NULL)
+    
+    if (!is.null(json_data)) {
+      data.frame(
+        experiment = paste0("exp", json_data$idExperiment),
+        run        = paste0("run_", json_data$idRun),
+        avg_train  = json_data$avgFitness,
+        sim_fitness = json_data$testSimulations,
+        stringsAsFactors = FALSE
+      )
+    } else {
+      NULL
+    }
+  }))
+}
+```
+
+```{r test-robustness-rq1, echo=FALSE, fig.cap="RQ1 (Señales): Evaluación de robustez en test de estrés.", out.width="90%", fig.height=4, fig.align="center"}
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(jsonlite)
+
+# Ruta corregida a data/simulations/
+test_files <- list.files("data/simulations/", pattern = "^test-stats-.*\\.json$", full.names = TRUE)
+
+if (length(test_files) == 0) {
+  # Si no los encuentra por el prefijo test-stats-, busca cualquier .json en simulations/
+  test_files <- list.files("data/simulations/", pattern = "\\.json$", full.names = TRUE)
+}
+
+if (length(test_files) == 0) {
+  ggplot() + 
+    annotate("text", x = 1, y = 1, 
+             label = "ATENCIÓN: No se encontraron archivos JSON en 'data/simulations/'", 
+             color = "red", size = 4) +
+    theme_void()
+  
+} else {
+  
+  # Carga de datos desde simulations/
+  df_rq1 <- do.call(rbind, lapply(test_files, function(filepath) {
+    json_data <- tryCatch(fromJSON(filepath), error = function(e) NULL)
+    if (!is.null(json_data) && !is.null(json_data$testSimulations)) {
+      data.frame(
+        experiment = paste0("exp", json_data$idExperiment),
+        run        = paste0("run_", json_data$idRun),
+        simFitness = json_data$testSimulations,
+        stringsAsFactors = FALSE
+      )
+    } else {
+      NULL
+    }
+  }))
+
+  if (is.null(df_rq1) || nrow(df_rq1) == 0) {
+    ggplot() + 
+      annotate("text", x = 1, y = 1, 
+               label = "ATENCIÓN: Se encontraron archivos en 'data/simulations/' pero no contienen 'testSimulations'", 
+               color = "red", size = 4) +
+    theme_void()
+  } else {
+    
+    # Suelo protector logarítmico
+    df_rq1$simFitness[df_rq1$simFitness < 1e-4] <- 1e-4
+
+    # Generación del gráfico con Boxplots limpios
+    p_rq1 <- ggplot(df_rq1, aes(x = experiment, y = simFitness, fill = experiment)) +
+      geom_boxplot(outlier.color = "red", outlier.alpha = 0.2, outlier.size = 0.8, alpha = 0.7, width = 0.4) +
+      scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) +
+      labs(title = "RQ1 - Evaluación de Robustez en Test (1.000 sims/run)",
+           subtitle = "Comparativa masiva de distribución de fitness para RQ1",
+           x = "Configuración / Experimento",
+           y = "Fitness de Test (Log10)") +
+      theme_bw(base_size = 11) +
+      theme(legend.position = "none")
+    
+    plot(p_rq1)
+  }
+}
+```
+
+```{r test-robustness-rq2-rq3, echo=FALSE, fig.cap="Evaluación de robustez en test para RQ2 (Atacante) y RQ3 (Policías) agrupando todas las ejecuciones (1.000 evaluaciones por run).", out.width="90%", fig.height=4, fig.align="center"}
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(jsonlite)
+
+# 1. Carga de archivos de test para RQ2 y RQ3 desde data/simulations/
+test_files_rq2 <- list.files("data/simulations/", pattern = "^test-stats-rq2_attacker_.*\\.json$", full.names = TRUE)
+test_files_rq3 <- list.files("data/simulations/", pattern = "^test-stats-rq3_police_.*\\.json$", full.names = TRUE)
+
+test_files_combined <- c(test_files_rq2, test_files_rq3)
+
+if (length(test_files_combined) == 0) {
+  ggplot() + 
+    annotate("text", x = 1, y = 1, 
+             label = "ATENCIÓN: No se encontraron archivos de test para RQ2 o RQ3 en 'data/simulations/'", 
+             color = "red", size = 4) +
+    theme_void()
+} else {
+  
+  # 2. Cargar y etiquetar cada dataset por su Pregunta de Investigación
+  df_rq2_rq3 <- do.call(rbind, lapply(test_files_combined, function(filepath) {
+    json_data <- tryCatch(fromJSON(filepath), error = function(e) NULL)
+    if (!is.null(json_data) && !is.null(json_data$testSimulations)) {
+      
+      # Identificar si pertenece a RQ2 o RQ3
+      rq_label <- if (grepl("rq2_attacker", filepath)) "RQ2 (Atacante)" else "RQ3 (Policías)"
+      
+      data.frame(
+        rq         = rq_label,
+        experiment = paste0("exp", json_data$idExperiment),
+        run        = paste0("run_", json_data$idRun),
+        simFitness = json_data$testSimulations,
+        stringsAsFactors = FALSE
+      )
+    } else {
+      NULL
+    }
+  }))
+
+  if (is.null(df_rq2_rq3) || nrow(df_rq2_rq3) == 0) {
+    ggplot() + 
+      annotate("text", x = 1, y = 1, 
+               label = "ATENCIÓN: Se encontraron archivos pero no contenían la clave 'testSimulations'", 
+               color = "red", size = 4) +
+      theme_void()
+  } else {
+    
+    # 3. Suelo de protección para la escala logarítmica
+    df_rq2_rq3$simFitness[df_rq2_rq3$simFitness < 1e-4] <- 1e-4
+
+    # 4. Gráfica combinada RQ2 y RQ3 lado a lado con facet_wrap
+    p_rq2_rq3 <- ggplot(df_rq2_rq3, aes(x = experiment, y = simFitness, fill = rq)) +
+      geom_boxplot(outlier.color = "red", outlier.alpha = 0.2, outlier.size = 0.8, alpha = 0.7, width = 0.4) +
+      scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) +
+      scale_fill_manual(values = c("RQ2 (Atacante)" = "#e67e22", "RQ3 (Policías)" = "#2980b9")) +
+      facet_wrap(~rq, scales = "free_x") +
+      labs(title = " RQ2 - RQ3 - Evaluación de Robustez en Test (1.000 sims/run)",
+           subtitle = "Comparativa masiva de distribución de fitness para RQ2 y RQ3",
+           x = "Configuración / Experimento",
+           y = "Fitness de Test (Log10)") +
+      theme_bw(base_size = 11) +
+      theme(legend.position = "none")
+    
+    plot(p_rq2_rq3)
+  }
+}
+```
+
+\newpage
+
+```{r test-table-definitiva, echo=FALSE}
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(jsonlite)
+
+test_files <- list.files("data/simulations/", pattern = "^test-stats-.*\\.json$", full.names = TRUE)
+
+if (length(test_files) > 0) {
+  
+  df_list <- list()
+  
+  for (f_test in test_files) {
+    json_test <- tryCatch(fromJSON(f_test), error = function(e) NULL)
+    
+    if (!is.null(json_test) && !is.null(json_test$testSimulations)) {
+      exp_id <- json_test$idExperiment
+      run_id <- json_test$idRun
+      
+      # 1. Identificar RQ/Instancia por nombre de archivo
+      rq_name <- "RQ1 (Signals)"
+      if (grepl("rq2_attacker", f_test)) {
+        rq_name <- "RQ2 (Attacker)"
+      } else if (grepl("rq3_police", f_test)) {
+        rq_name <- "RQ3 (Police)"
+      }
+      
+      # 2. Buscar archivo de entrenamiento correspondiente
+      instance_prefix <- gsub(".*test-stats-(.*)_exp_.*", "\\1", basename(f_test))
+      pattern_train   <- paste0(".*", instance_prefix, ".*_exp_", exp_id, "_run_", run_id, "\\.json$")
+      f_train         <- list.files("data/statistics/", pattern = pattern_train, full.names = TRUE)[1]
+      
+      train_fitness <- NA
+      if (!is.na(f_train) && file.exists(f_train)) {
+        json_train <- tryCatch(fromJSON(f_train, simplifyVector = FALSE), error = function(e) NULL)
+        if (!is.null(json_train)) {
+          try({
+            if (is.list(json_train) && length(json_train) > 0) {
+              first_elem <- json_train[[1]]
+              if ("rundata" %in% names(first_elem)) {
+                isols <- first_elem$rundata[[1]]$isols
+                if (!is.null(isols$fitness)) {
+                  train_fitness <- tail(isols$fitness, 1)[[1]]
+                }
+              }
+            }
+          }, silent = TRUE)
+        }
+      }
+      
+      if (is.na(train_fitness) || length(train_fitness) == 0) {
+        train_fitness <- json_test$avgFitness
+      }
+      
+      df_list[[length(df_list) + 1]] <- data.frame(
+        Instancia     = rq_name,
+        Exp           = paste0("exp", exp_id),
+        Run           = paste0("run\\_", run_id),
+        run_num       = as.numeric(run_id),
+        Train_Fitness = round(as.numeric(train_fitness), 6),
+        Test_Mean     = round(mean(json_test$testSimulations, na.rm = TRUE), 6),
+        Test_Median   = round(median(json_test$testSimulations, na.rm = TRUE), 6),
+        Test_IQR      = round(IQR(json_test$testSimulations, na.rm = TRUE), 6),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  
+  tabla_datos <- do.call(rbind, df_list)
+  
+  if (!is.null(tabla_datos) && nrow(tabla_datos) > 0) {
+    
+    tabla_final <- tabla_datos %>%
+      arrange(Instancia, Exp, run_num) %>%
+      select(-run_num)
+    
+    # Renderizado seguro en LaTeX
+    kbl(
+      tabla_final,
+      format = "latex",
+      escape = FALSE,
+      booktabs = TRUE,
+      longtable = TRUE,
+      centering = TRUE,
+      caption = "Comparativa del Mejor Fitness en Entrenamiento frente al Test de Estrés (1.000 sims).",
+      col.names = c("Instancia", "Exp.", "Run", "Train (Fitness)", "Test (Mean)", "Test (Median)", "Test (IQR)")
+    ) %>%
+      kable_styling(
+        latex_options = c("repeat_header"),
+        font_size = 8
+      )
+  }
+}
+```
+
+```{r train-vs-test-scatter, echo=FALSE, fig.cap="Correlación entre Fitness de Entrenamiento y Test por Experimento.", out.width="100%", fig.height=4.5, fig.align="center"}
 library(ggplot2)
 library(scales)
 
-for (instance in instances) {
-  has_data <- FALSE
-  # Comprobamos si al menos un algoritmo tiene datos para esta instancia
-  for (alg in algorithms) {
-    if (is.list(data_processed[[alg, instance]])) has_data <- TRUE
-  }
-  
-  if (has_data) {
-    may <- 0 
-    miy <- Inf
+if (exists("tabla_datos") && !is.null(tabla_datos) && nrow(tabla_datos) > 0) {
+  ggplot(tabla_datos, aes(x = Train_Fitness, y = Test_Mean, color = Exp, shape = Exp)) +
+    geom_point(size = 2.5, alpha = 0.85) +
     
-    # 1. Cálculo seguro y acotado de los límites del eje Y
-    for (alg in algorithms) {
-      if (is.list(data_processed[[alg, instance]])) {
-        rd <- data_processed[[alg, instance]]$rundata
-        if (!is.null(rd) && !is.null(rd$mean$diversity)) {
-          val_top <- rd$mean$diversity + rd$se$diversity
-          val_bot <- rd$mean$diversity - rd$se$diversity
-          val_top <- val_top[is.finite(val_top)]
-          val_bot <- val_bot[is.finite(val_bot)]
-          
-          if (length(val_top) > 0) may <- max(may, max(val_top), na.rm=TRUE)
-          if (length(val_bot) > 0) miy <- min(miy, min(val_bot), na.rm=TRUE)
-        }
-      }
-    }
+    # Eje X en log10 pero con formato científico estándar y limpio
+    scale_x_log10(
+      labels = label_scientific(digits = 2),
+      guide = guide_axis(angle = 30) # Inclinación suave
+    ) +
     
-    # Paracaídas de seguridad si la diversidad máxima y mínima coinciden (tests cortos)
-    if (miy == may) {
-      miy <- miy - 0.1
-      may <- may + 0.1
-    }
+    # Eje Y con escala adaptada: usa decimales continuos para valores cercanos a 1-5, o científico si es muy pequeño
+    scale_y_continuous(
+      labels = label_number(accuracy = 0.01) # Muestra números normales como 0.00, 0.50, 4.50, 5.00
+    ) +
     
-    # 2. Construcción dinámica del dataframe (inmune a celdas vacías o NAs)
-    df_plot <- data.frame()
-    for (alg in algorithms) {
-      if (is.list(data_processed[[alg, instance]])) {
-        rd <- data_processed[[alg, instance]][["rundata"]]
-        if (!is.null(rd) && !is.null(rd$mean)) {
-           temp <- data.frame(
-             evals = rd[["mean"]]$evals,
-             diversity = rd[["mean"]]$diversity,
-             se = rd[["se"]]$diversity,
-             alg = alg
-           )
-           df_plot <- rbind(df_plot, temp)
-        }
-      }
-    }
-      
-    # 3. Renderizado del gráfico mediante ggplot
-    if (nrow(df_plot) > 0) {
-      p <- ggplot(data=df_plot, aes(x=evals, color = alg, group = alg)) + 
-        geom_line(aes(y=diversity)) +
-        geom_point(aes(y=diversity), size=2) + # Muestra el punto claramente en ejecuciones cortas
-        geom_ribbon(aes(ymin=diversity-se, ymax=diversity+se), fill='black', alpha=0.2) +
-        coord_cartesian(ylim=c(miy, may)) +
-        xlab("Número de Evaluaciones") +
-        ylab("Diversidad") +
-        ggtitle(instance) +
-        theme_bw() + 
-        labs(color = "") + 
-        theme(aspect.ratio=1, legend.position = "bottom")
-      show(p)
-    }
-  }
+    facet_wrap(~ Instancia, scales = "free") + # Permite que los ejes se adapten al rango de cada RQ
+    
+    labs(
+      title = "Evaluación de Generalización por Experimento",
+      x = "Fitness en Entrenamiento",
+      y = "Media de Fitness en Test",
+      color = "Experimento",
+      shape = "Experimento"
+    ) +
+    theme_bw(base_size = 10) +
+    theme(
+      legend.position = "bottom",
+      strip.background = element_rect(fill = "#f0f0f0"),
+      strip.text = element_text(face = "bold"),
+      panel.spacing = unit(1.2, "lines"), # Más espacio horizontal entre gráficas
+      axis.text.x = element_text(size = 8),
+      axis.text.y = element_text(size = 8)
+    )
 }
-
-# Limpieza segura de variables locales
-rm(list = c("df_plot"))
 ```
 
-```r
 ```{r solutions, fig.cap = "Comparativa de eficiencia: Distribución de fitness final (Menor es mejor)", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
 library(ggplot2)
 library(scales)
@@ -489,11 +675,22 @@ for (instance in instances) {
 }
 ```
 
-
-
 ```{r fitness}
 num_instances <- length(instances)
 num_algorithms <- length(algorithms)
+
+# FUNCIÓN DE FORMATEO INTELIGENTE:
+# Muestra notación científica (e.g. 6.40e-04) para valores muy pequeños (< 0.01) y decimales normales para el resto.
+fmt <- function(x) {
+  if (is.na(x) || is.null(x)) return("-")
+  x <- as.numeric(x)
+  if (x == 0) return("0")
+  if (abs(x) < 0.01) {
+    return(sprintf("%.2e", x)) # Formato e-04
+  } else {
+    return(sprintf("%.3f", x)) # Formato decimal estándar
+  }
+}
 
 # Función de Wilcoxon protegida contra datos ausentes o insuficientes
 getPval <- function(instance, alg1, alg2) {
@@ -539,7 +736,6 @@ table_significance <- data.frame(matrix(nrow=num_instances, ncol=num_algorithms)
 colnames(table_significance) <- algorithms
 rownames(table_significance) <- instances
 
-# Corrección 1: Usamos un vector con nombres para garantizar estabilidad en las comparaciones
 bestalg <- rep(NA_character_, num_instances)
 names(bestalg) <- instances
 
@@ -570,50 +766,52 @@ for (instance in instances) {
 
 library(kableExtra)
 
-prec <- 3
-
 table_fitness <- data.frame(matrix(nrow=num_instances, ncol=4*num_algorithms))
 colnames(table_fitness) <- apply(expand.grid(c("best", "median", "mean", "stat"), algorithms), 
                                  1, paste, collapse = ".")
 rownames(table_fitness) <- instances
 
+# CABECERA 1 DE GRUPOS (Instancia + 4 columnas por cada algoritmo)
 first_header <- c(1, rep(4, num_algorithms))
 names(first_header) <- c(" ", algorithms)
 
-second_header <- rep(1, 1 + num_algorithms * 4)
-names(second_header) <- c("instancia", rep(c("$x^*$", "$\\tilde{x}$", 
-                                             "$\\bar{x} \\pm \\sigma_{\\bar{x}}$", " "), num_algorithms))
+# CABECERA 2 DE COLUMNAS (Solo las 4 métricas repetidas por cada algoritmo)
+sub_cols <- c("$x^*$", "$\\tilde{x}$", "$\\bar{x} \\pm \\sigma_{\\bar{x}}$", " ")
+second_header <- rep(sub_cols, num_algorithms)
 
-# Rellenamos la tabla final esquivando las celdas sin datos
+# Rellenamos la tabla final usando el nuevo formateador `fmt()`
 for (alg in algorithms) {
   for (instance in instances) {
     if (is.list(data_processed[[alg, instance]])) {
       data_solutions <- data_processed[[alg, instance]][["sols"]]
       if (!is.null(data_solutions) && !is.null(data_solutions$fitness) && length(data_solutions$fitness) > 0) {
-        table_fitness[instance, paste("best", alg, sep=".")] <- round(min(data_solutions$fitness, na.rm=TRUE), prec)
-        table_fitness[instance, paste("median", alg, sep=".")] <- round(median(data_solutions$fitness, na.rm=TRUE), prec)
-        table_fitness[instance, paste("mean", alg, sep=".")] <- paste(round(mean(data_solutions$fitness, na.rm=TRUE), prec), "$\\pm$", round(stderror(data_solutions$fitness), prec))
-        table_fitness[instance, paste("stat", alg, sep=".")] <- getSymbol(alg, instance)
+        
+        fits <- data_solutions$fitness
+        
+        table_fitness[instance, paste("best", alg, sep=".")]   <- fmt(min(fits, na.rm=TRUE))
+        table_fitness[instance, paste("median", alg, sep=".")] <- fmt(median(fits, na.rm=TRUE))
+        table_fitness[instance, paste("mean", alg, sep=".")]   <- paste(fmt(mean(fits, na.rm=TRUE)), "$\\pm$", fmt(stderror(fits)))
+        table_fitness[instance, paste("stat", alg, sep=".")]   <- getSymbol(alg, instance)
         next
       }
     }
-    table_fitness[instance, paste("best", alg, sep=".")] <- "-"
+    table_fitness[instance, paste("best", alg, sep=".")]   <- "-"
     table_fitness[instance, paste("median", alg, sep=".")] <- "-"
-    table_fitness[instance, paste("mean", alg, sep=".")] <- "N/A"
-    table_fitness[instance, paste("stat", alg, sep=".")] <- " "
+    table_fitness[instance, paste("mean", alg, sep=".")]   <- "N/A"
+    table_fitness[instance, paste("stat", alg, sep=".")]   <- " "
   }
 }
 
-# MANDATORIO: Escapamos los guiones bajos (_) en las filas y cabeceras para que LaTeX no crashee
+# Escapamos los guiones bajos (_) en los nombres de las filas y cabeceras
 rownames(table_fitness) <- gsub("_", "\\\\_", rownames(table_fitness))
-names(first_header) <- gsub("_", "\\\\_", names(first_header))
+names(first_header)     <- gsub("_", "\\\\_", names(first_header))
 
-# Renderizado seguro de la tabla en el PDF
+# Renderizado seguro de la tabla en LaTeX
 table_fitness %>%
   kbl(escape = FALSE,
-      booktabs = T, 
+      booktabs = TRUE, 
       caption = "Resultados globales de las simulaciones. Cada columna muestra el mejor valor encontrado ($x^*$), la mediana ($\\tilde{x}$), la media ($\\bar{x}$) y el error estándar de la media ($\\sigma_{\\bar{x}}$). Una estrella $\\star$ marca al mejor algoritmo en cada instancia, y un símbolo $\\bullet$ indica significación estadística.",
-      col.names=names(second_header)) %>%
-kable_styling(full_width = F, latex_options="scale_down") %>%
-add_header_above(first_header)
+      col.names = second_header) %>%
+  kable_styling(full_width = FALSE, latex_options = c("scale_down", "HOLD_position")) %>%
+  add_header_above(first_header)
 ```
