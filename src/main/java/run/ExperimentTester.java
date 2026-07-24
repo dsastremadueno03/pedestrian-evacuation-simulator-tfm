@@ -7,7 +7,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
 import com.github.cliftonlabs.json_simple.JsonArray;
 import com.github.cliftonlabs.json_simple.JsonObject;
 import com.github.cliftonlabs.json_simple.Jsoner;
@@ -28,6 +31,8 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.configuration.Simulati
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
+import es.uma.lcc.caesium.statistics.Descriptive;
+import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
 import pedestrian.Police;
@@ -73,6 +78,7 @@ public class ExperimentTester {
 			
 			JsonArray listOfExperiments = (JsonArray) jsonMain.get("experiments");
 			String mapPath = jsonMain.get("map").toString();
+			int testSims = JsonUtil.getInt(jsonMain, "testSimulations");
 					
 			// Experiment
 			for(var obj : listOfExperiments) {
@@ -102,7 +108,7 @@ public class ExperimentTester {
 				Environment environment = Environment.fromFile(mapPath);
 				Domain domain = environment.getDomain(1);
 				ExitEvacuationProblem eep = new ExitEvacuationProblem(environment, environmentNumbers[0], simulation);	
-			    EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation);
+			    EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation, thisSeed);
 			    EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
 			    ea.setObjectiveFunction(evaluator);
 			    		
@@ -121,15 +127,43 @@ public class ExperimentTester {
 			    	System.err.println("ERROR: Could not export JSON!");
 			    	e.printStackTrace();
 			    }
-			    		
+			    
+			    // Rebuild the best individual's simulations
 			    Individual bestInRun = ea.getStatistics().getBest(0); // There is only 1 run in a thread
-				EAEvaluator.SimulationResult infoInRun = evaluator.getSimulation(bestInRun);
-				double fitness = evaluator.getFitness(infoInRun.metrics());
+			    
+			    double[] fitnesses = new double[testSims];
+			    
+			    // Execute 1000 simulations from best individual as testing
+			    for(int s = 0; s < testSims; s++) {
+			    	// Seed with offset (100000) for testing new configurations
+			    	long simSeed = Objects.hash(thisSeed, bestInRun.hashCode(), s + 100000);
+			    	Random.random.setSeed(simSeed);
+			    	EAEvaluator.SimulationResult result = evaluator.getSimulation(bestInRun);
+			    	fitnesses[s] = evaluator.getFitness(result.metrics());
+			    }
+			    
+			    double avgFitness = Descriptive.mean(fitnesses);
+			    
+			    // We look for the median fitness simulation
+			    int repIndex = 0;
+			    double minDiff = Double.MAX_VALUE;
+			    
+			    for(int s = 0; s < testSims; s++) {
+			    	double diff = Math.abs(fitnesses[s] - avgFitness);
+			    	if(diff < minDiff) {
+			    		minDiff = diff;
+			    		repIndex = s;
+			    	}
+			    }
+			    
+			    // Now we get the information from median simulation and store it
+			    long repSeed = Objects.hash(thisSeed, bestInRun.hashCode(), repIndex + 100000);
+			    Random.random.setSeed(repSeed);
+			    EAEvaluator.SimulationResult repInfo = evaluator.getSimulation(bestInRun);
 
-			  
-				saveRunCSV(w, idExperiment, idRun, fitness, infoInRun);
+				saveRunCSV(w, idExperiment, idRun, avgFitness, repInfo);
 			    		
-			    saveData(w, idExperiment, fitness, infoInRun, bestInRun, evaluator, prefix + "_run_" + idRun);
+			    saveData(w, idExperiment, avgFitness, repInfo, bestInRun, evaluator, prefix + "_run_" + idRun);
 			    
 			   
 			}

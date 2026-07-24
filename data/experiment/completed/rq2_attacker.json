@@ -1,12 +1,12 @@
 {
   "map": "data/environments/environment-example-supermarket.json",
+  "testSimulations": 1000,
   "experiments": [
     {
       "id": 1,
-      "comment": "RQ2 - Vision Local + Atacantes (Sin Policia)",
       "seed": 1,
-      "numSimulations": 1,
       "simulator": {
+		"numSimulations": 1,
         "timeLimit": 120.0,
         "simulatorType": "CA",
         "cellularAutomatonParameters": { "cellDimension": 0.4, "neighborhood": "Moore", "floorField": "DijkstraStaticMoore" }

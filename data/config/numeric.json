@@ -6,7 +6,7 @@
             "numislands" : 1,
             "popsize" : 100,
             "offspring" : 99,
-            "maxevals" : 50000,
+            "maxevals" : 150,
             "initialization" : {
                 "name": "randomvector"
             },

@@ -2,6 +2,7 @@ package ea;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 import com.github.cliftonlabs.json_simple.JsonArray;
@@ -36,6 +37,8 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Shape;
+import es.uma.lcc.caesium.statistics.Descriptive;
+import es.uma.lcc.caesium.statistics.Random;
 import pedestrian.Attacker;
 import pedestrian.Civilian;
 import pedestrian.MultiPedestrianFactory;
@@ -71,24 +74,43 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	private int mapWidth;
 	private int mapHeight;
 	
+	private long seed;
+	
 	// Contains data about cell dimension, neighborhood and floor field
 	private SimulationConfiguration simulation; 
 	private double cellDimension;
+	private int numSimulations;
 	private final Function<Scenario, FloorField> floorField;
 	private final Function<Scenario, Neighbourhood> neighborhood;
 	
+	/**
+	 * Generate the EA Evaluator
+	 * 
+	 * @param eep Data of the problem
+	 * @param nExits Number of exits
+	 * @param nTempSigns Number of temporal signs
+	 * @param nPermSigns Number of permanent signs
+	 * @param nPolice Number of police agents
+	 * @param domain Domain of the map
+	 * @param populationConfig Population information
+	 * @param weightJson Population behavior and weights
+	 * @param simulation Simulation information
+	 * @param seed Seed of the run
+	 */
 	// Objective function
-	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson, SimulationConfiguration simulation){
+	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson, SimulationConfiguration simulation, long seed){
 		// Number of genes
 		super(nExits + (nTempSigns * 2) + (nPermSigns * 2) + (nPolice * 2), 0, 1);
 		
 		maxSimulationTime = simulation.getDouble("timeLimit");
+		numSimulations = simulation.getInt("numSimulations");
 		
 		this.eep = eep;
 		decoder = new Double2AccessDecoder(eep);
 		
 		// Need to convert it to cells
 		cellDimension = simulation.getDouble("cellularAutomatonParameters/cellDimension");
+		
 		mapWidth = (int) Math.ceil(eep.getWidth() / cellDimension);
 		mapHeight = (int) Math.ceil(eep.getHeight() / cellDimension);
 		
@@ -111,6 +133,8 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 					default -> throw new IllegalArgumentException("Invalid neighbourhood in configuration");
 				};
 		
+		this.seed = seed;
+				
 		this.nExits = nExits;
 		this.nTempSigns = nTempSigns;
 		this.nPermSigns = nPermSigns;
@@ -122,6 +146,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 				.floorField(floorField)
 				.build();
 		
+	}
+	
+	public int getNumSimulations() {
+		return this.numSimulations;
 	}
 	
 	@Override
@@ -683,29 +711,26 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	}
 	
 	/**
-	 * This is the main function of the EA. It manages via other functions all the individual's data
-	 * and returns the fitness value.
+	 * Calculates mean fitness of all simulations for one individual.
+	 * 
+	 * @param i Individual to get fitness from
+	 * @return Average fitness of all simulations
 	 */
 	@Override
 	protected double _evaluate(Individual i) {
-		// 1. Decode individual
+		// Stores fitness of every simulation
+		double[] fitnesses = new double[numSimulations];
+		// Not to decode several times
 		DecodedDesign dd = decode(i);
+		for(int s = 0; s < numSimulations; s++) {
+			// Generates unique seed
+			Random.random.setSeed(Objects.hash(seed, i.hashCode(), s));
+			// Simulates specific simulation
+			SimulationResult result = getSimulation(dd);
+			fitnesses[s] = getFitness(result.metrics());
+		}
 		
-		// 2. Generates automaton based on scenario and coordinates
-		SpecificCellularAutomaton automaton = setAutomaton(dd);
-	    
-	    // 3. Generates population of the simulation
-	    List<Pedestrian> crowd = setCrowd(dd, automaton);
-	    
-	    // 4. Calculates precalculated maps and runs simulation
-	    simulate(automaton);
-	    
-	    // 5. Get metrics from individual
-	    SimulationMetrics metrics = getMetrics(automaton, crowd);
-	    
-	    // 6. Calculate fitness
-	    double repairPenaltyWeight = 0.001; // Repair penalty importance less than trapped civilians
-	    return getFitness(metrics) + dd.repairPenalty * repairPenaltyWeight;
+		return Descriptive.mean(fitnesses);
 	}
 	
 	/**
@@ -762,6 +787,20 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	   */
 	  public SimulationResult getSimulation(Individual i) {
 		  DecodedDesign dd = decode(i);
+		  SpecificCellularAutomaton automaton = setAutomaton(dd);
+		  List<Pedestrian> crowd = setCrowd(dd, automaton);
+		  simulate(automaton);
+		  SimulationMetrics metrics = getMetrics(automaton, crowd);
+		  return new SimulationResult(automaton, crowd, metrics);
+	  }
+	  
+	  /**
+	   * Returns data from specific individual's simulation
+	   * 
+	   * @param dd Decoded info of individual
+	   * @return Simulation data
+	   */
+	  public SimulationResult getSimulation(DecodedDesign dd) {
 		  SpecificCellularAutomaton automaton = setAutomaton(dd);
 		  List<Pedestrian> crowd = setCrowd(dd, automaton);
 		  simulate(automaton);
