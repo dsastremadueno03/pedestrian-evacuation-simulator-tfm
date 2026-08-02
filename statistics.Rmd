@@ -815,3 +815,224 @@ table_fitness %>%
   kable_styling(full_width = FALSE, latex_options = c("scale_down", "HOLD_position")) %>%
   add_header_above(first_header)
 ```
+
+```{r load-multitrace-data, include=FALSE}
+library(jsonlite)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(purrr)
+
+trace_files <- list.files("data/traces", pattern = "^trace_.*\\.json$", full.names = TRUE)
+
+load_single_trace <- function(f_trace) {
+  base_id <- gsub("^trace_", "", gsub("\\.json$", "", basename(f_trace)))
+  
+  f_coords <- file.path("data/traces", paste0("coordinates_", base_id, ".json"))
+  f_result <- list.files("data/results", pattern = paste0("^result_.*", base_id, ".*\\.json$"), full.names = TRUE)[1]
+  
+  rq_label <- "RQ1 (Signals)"
+  if (grepl("rq2", base_id, ignore.case = TRUE)) rq_label <- "RQ2 (Attacker)"
+  if (grepl("rq3", base_id, ignore.case = TRUE)) rq_label <- "RQ3 (Police)"
+  
+  trace_json <- tryCatch(fromJSON(f_trace, simplifyVector = FALSE), error = function(e) NULL)
+  if (is.null(trace_json) || is.null(trace_json$snapshots)) return(NULL)
+  
+  positions <- lapply(trace_json$snapshots, function(snap) {
+    t_val <- snap$timestamp
+    lapply(snap$crowd, function(p) {
+      data.frame(
+        time = t_val,
+        id = paste0(base_id, "_p", p$id),
+        ped_id = p$id,
+        x = p$location$coordinates$X,
+        y = p$location$coordinates$Y,
+        sim_id = base_id,
+        rq = rq_label,
+        stringsAsFactors = FALSE
+      )
+    }) %>% bind_rows()
+  }) %>% bind_rows()
+  
+  coords_df <- NULL
+  if (file.exists(f_coords)) {
+    coords_json <- tryCatch(fromJSON(f_coords), error = function(e) NULL)
+    if (!is.null(coords_json$exits)) {
+      coords_df <- as.data.frame(coords_json$exits) %>%
+        mutate(sim_id = base_id, rq = rq_label)
+    }
+  }
+  
+  return(list(positions = positions, exits = coords_df))
+}
+
+all_data <- lapply(trace_files, load_single_trace) %>% compact()
+
+all_positions <- lapply(all_data, `[[`, "positions") %>% bind_rows()
+all_exits     <- lapply(all_data, `[[`, "exits") %>% bind_rows()
+```
+
+```{r heatmap-density, echo=FALSE, fig.cap="Mapa de calor de densidad y ocupación espacial agregada por escenario.", out.width="100%", fig.height=4, fig.align="center"}
+if (exists("all_positions") && nrow(all_positions) > 0) {
+  ggplot(all_positions, aes(x = x, y = y)) +
+    stat_density_2d(aes(fill = after_stat(level)), geom = "polygon", alpha = 0.6) +
+    scale_fill_viridis_c(option = "inferno", name = "Densidad") +
+    {if (!is.null(all_exits) && nrow(all_exits) > 0) 
+      geom_point(data = all_exits, aes(x = X, y = Y), color = "green", size = 2.5, shape = 18, inherit.aes = FALSE)} +
+    facet_wrap(~ rq) +
+    labs(
+      title = NULL,
+      x = "Coordenada X (m)",
+      y = "Coordenada Y (m)"
+    ) +
+    theme_bw(base_size = 10) +
+    theme(
+      strip.background = element_rect(fill = "#f0f0f0"),
+      strip.text = element_text(face = "bold")
+    ) +
+    coord_fixed()
+}
+```
+
+```{r trajectories-sample, echo=FALSE, fig.cap="Trayectorias individuales de movimiento de los agentes durante la evacuación.", out.width="100%", fig.height=4, fig.align="center"}
+if (exists("all_positions") && nrow(all_positions) > 0) {
+  
+  # Seleccionamos el primer run de cada RQ para no saturar el plano
+  sample_positions <- all_positions %>%
+    group_by(rq) %>%
+    filter(sim_id == first(sim_id)) %>%
+    ungroup()
+
+  starts <- sample_positions %>% group_by(id) %>% filter(time == min(time))
+  ends   <- sample_positions %>% group_by(id) %>% filter(time == max(time))
+
+  ggplot(sample_positions, aes(x = x, y = y, color = factor(ped_id), group = id)) +
+    geom_path(linewidth = 0.7, alpha = 0.8) +
+    geom_point(data = starts, aes(x = x, y = y), shape = 16, size = 1.8) +
+    geom_point(data = ends, aes(x = x, y = y), shape = 17, size = 2.5) +
+    facet_wrap(~ rq) +
+    labs(
+      title = NULL,
+      x = "Coordenada X (m)",
+      y = "Coordenada Y (m)"
+    ) +
+    theme_bw(base_size = 10) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0f0f0"),
+      strip.text = element_text(face = "bold")
+    ) +
+    coord_fixed()
+}
+```
+
+```{r clearance-rate, echo=FALSE, fig.cap="Tasa de evacuación acumulada promedio a lo largo del tiempo.", out.width="90%", fig.height=4, fig.align="center"}
+if (exists("all_positions") && nrow(all_positions) > 0) {
+  
+  evac_aggregated <- all_positions %>%
+    group_by(rq, sim_id, time) %>%
+    summarise(people_remaining = n_distinct(id), .groups = "drop_last") %>%
+    mutate(
+      total_people = max(people_remaining),
+      evacuated = total_people - people_remaining
+    ) %>%
+    group_by(rq, time) %>%
+    summarise(
+      mean_evacuated = mean(evacuated),
+      sd_evac = sd(evacuated),
+      .groups = "drop"
+    )
+
+  ggplot(evac_aggregated, aes(x = time, y = mean_evacuated, color = rq, fill = rq)) +
+    geom_line(linewidth = 1.1) +
+    geom_ribbon(aes(ymin = pmax(0, mean_evacuated - sd_evac), ymax = mean_evacuated + sd_evac), alpha = 0.15, color = NA) +
+    labs(
+      title = NULL,
+      x = "Tiempo de Simulación (s)",
+      y = "Civiles Evacuados (Promedio)",
+      color = "Escenario",
+      fill = "Escenario"
+    ) +
+    theme_bw(base_size = 10) +
+    theme(legend.position = "bottom")
+}
+```
+
+```{r speed-profile, echo=FALSE, fig.cap="Evolución de la velocidad instantánea del flujo peatonal.", out.width="90%", fig.height=4, fig.align="center"}
+if (exists("all_positions") && nrow(all_positions) > 0) {
+  
+  speed_df <- all_positions %>%
+    group_by(id) %>%
+    arrange(time) %>%
+    mutate(
+      dx = x - lag(x),
+      dy = y - lag(y),
+      dt = time - lag(time),
+      speed = sqrt(dx^2 + dy^2) / dt
+    ) %>%
+    filter(!is.na(speed))
+
+  ggplot(speed_df, aes(x = time, y = speed, color = rq)) +
+    geom_smooth(method = "loess", se = TRUE, alpha = 0.2, linewidth = 1.1) +
+    labs(
+      title = NULL,
+      x = "Tiempo de Simulación (s)",
+      y = "Velocidad Instantánea Promedio (m/s)",
+      color = "Escenario"
+    ) +
+    theme_bw(base_size = 10) +
+    theme(legend.position = "bottom")
+}
+```
+
+```{r operational-metrics-table, echo=FALSE}
+library(knitr)
+library(kableExtra)
+
+results_files <- list.files("data/results", pattern = "^result_.*\\.json$", full.names = TRUE)
+
+if (length(results_files) > 0) {
+  
+  res_list <- lapply(results_files, function(f) {
+    j <- tryCatch(fromJSON(f), error = function(e) NULL)
+    if (is.null(j)) return(NULL)
+    
+    # 🎯 CORREGIDO: ignore.case en lugar de ignore_case
+    rq_label <- "RQ1 (Signals)"
+    if (grepl("rq2", f, ignore.case = TRUE)) rq_label <- "RQ2 (Attacker)"
+    if (grepl("rq3", f, ignore.case = TRUE)) rq_label <- "RQ3 (Police)"
+    
+    data.frame(
+      RQ = rq_label,
+      Evacuados = ifelse(!is.null(j$civilian_evacuated), j$civilian_evacuated, NA),
+      Fallecidos = ifelse(!is.null(j$civilian_killed), j$civilian_killed, 0),
+      Atrapados = ifelse(!is.null(j$civilian_trapped), j$civilian_trapped, 0),
+      Tiempo_Medio = ifelse(!is.null(j$mean_time), j$mean_time, NA),
+      Pasos_Medios = ifelse(!is.null(j$mean_steps), j$mean_steps, NA),
+      stringsAsFactors = FALSE
+    )
+  }) %>% compact() %>% bind_rows()
+
+  summary_table <- res_list %>%
+    group_by(RQ) %>%
+    summarise(
+      `Evacuados (Media)` = sprintf("%.2f", mean(Evacuados, na.rm = TRUE)),
+      `Fallecidos (Media)` = sprintf("%.2f", mean(Fallecidos, na.rm = TRUE)),
+      `Atrapados (Media)`  = sprintf("%.2f", mean(Atrapados, na.rm = TRUE)),
+      `Tiempo Medio (s)`  = sprintf("%.2f s", mean(Tiempo_Medio, na.rm = TRUE)),
+      `Pasos Medios`       = sprintf("%.2f", mean(Pasos_Medios, na.rm = TRUE))
+    )
+
+  kbl(
+    summary_table,
+    format = "latex",
+    booktabs = TRUE,
+    centering = TRUE,
+    caption = "Métricas operativas de evacuación y supervivencia registradas en las simulaciones de test."
+  ) %>%
+    kable_styling(
+      latex_options = c("HOLD_position", "scale_down"),
+      font_size = 9
+    )
+}
+```

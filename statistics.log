@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.11.25)  24 JUL 2026 20:24
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.11.25)  25 JUL 2026 12:39
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -684,7 +684,31 @@ Overfull \hbox (10.90929pt too wide) in paragraph at lines 338--338
 
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <10.95> on input line 343.
-[5{c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}{c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc} <./statistics_files/figure-latex/train-vs-test-scatter-1.pdf> <./statistics_files/figure-latex/solutions-1.pdf> <./statistics_files/figure-latex/solutions-2.pdf> <./statistics_files/figure-latex/solutions-3.pdf>] (./statistics.aux)
+<statistics_files/figure-latex/heatmap-density-1.pdf, id=89, 469.755pt x 289.08pt>
+File: statistics_files/figure-latex/heatmap-density-1.pdf Graphic file (type pdf)
+<use statistics_files/figure-latex/heatmap-density-1.pdf>
+Package pdftex.def Info: statistics_files/figure-latex/heatmap-density-1.pdf  used on input line 361.
+(pdftex.def)             Requested size: 380.69788pt x 234.27701pt.
+<statistics_files/figure-latex/trajectories-sample-1.pdf, id=90, 469.755pt x 289.08pt>
+File: statistics_files/figure-latex/trajectories-sample-1.pdf Graphic file (type pdf)
+<use statistics_files/figure-latex/trajectories-sample-1.pdf>
+Package pdftex.def Info: statistics_files/figure-latex/trajectories-sample-1.pdf  used on input line 370.
+(pdftex.def)             Requested size: 380.69788pt x 234.27701pt.
+<statistics_files/figure-latex/clearance-rate-1.pdf, id=91, 469.755pt x 289.08pt>
+File: statistics_files/figure-latex/clearance-rate-1.pdf Graphic file (type pdf)
+<use statistics_files/figure-latex/clearance-rate-1.pdf>
+Package pdftex.def Info: statistics_files/figure-latex/clearance-rate-1.pdf  used on input line 379.
+(pdftex.def)             Requested size: 342.62576pt x 210.84578pt.
+<statistics_files/figure-latex/speed-profile-1.pdf, id=92, 469.755pt x 289.08pt>
+File: statistics_files/figure-latex/speed-profile-1.pdf Graphic file (type pdf)
+<use statistics_files/figure-latex/speed-profile-1.pdf>
+Package pdftex.def Info: statistics_files/figure-latex/speed-profile-1.pdf  used on input line 388.
+(pdftex.def)             Requested size: 342.62576pt x 210.84578pt.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <9> on input line 409.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <5> on input line 409.
+[5{c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}{c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc} <./statistics_files/figure-latex/train-vs-test-scatter-1.pdf> <./statistics_files/figure-latex/solutions-1.pdf> <./statistics_files/figure-latex/solutions-2.pdf> <./statistics_files/figure-latex/solutions-3.pdf>] [6 <./statistics_files/figure-latex/heatmap-density-1.pdf> <./statistics_files/figure-latex/trajectories-sample-1.pdf>] [7 <./statistics_files/figure-latex/clearance-rate-1.pdf> <./statistics_files/figure-latex/speed-profile-1.pdf>] (./statistics.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-11-14>
@@ -694,18 +718,18 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 14441 strings out of 469519
- 233843 string characters out of 5468255
- 733865 words of memory out of 5000000
- 42833 multiletter control sequences out of 15000+600000
- 670422 words of font info for 72 fonts, out of 8000000 for 9000
+ 14509 strings out of 469519
+ 236399 string characters out of 5468255
+ 734372 words of memory out of 5000000
+ 42886 multiletter control sequences out of 15000+600000
+ 678435 words of font info for 82 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  89i,14n,93p,611b,655s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi8.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr9.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb><c:/Users/david/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb>
-Output written on statistics.pdf (5 pages, 303562 bytes).
+Output written on statistics.pdf (7 pages, 460056 bytes).
 PDF statistics:
- 209 PDF objects out of 1000 (max. 8388607)
- 158 compressed objects within 2 object streams
- 20 named destinations out of 1000 (max. 500000)
- 54 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 261 PDF objects out of 1000 (max. 8388607)
+ 199 compressed objects within 2 object streams
+ 27 named destinations out of 1000 (max. 500000)
+ 74 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -4,7 +4,7 @@
 PENDING_DIR="data/experiment/pending"
 COMPLETED_DIR="data/experiment/completed"
 JSON_EVO="data/config/numeric.json" 
-NUM_RUNS=30
+NUM_RUNS=1
 
 # Asegurar que existan las carpetas de salida
 mkdir -p "$COMPLETED_DIR"

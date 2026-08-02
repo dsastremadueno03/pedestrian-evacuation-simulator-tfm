@@ -17,6 +17,9 @@ public class Police extends PedestrianWithVision {
 	
 	public Police(int row, int column, PedestrianWithVisionParameters parameters, CellularAutomaton automaton){
 		super(row, column, parameters, automaton);
+		if(visionRadius < 0) {
+			this.visionRadius = Math.abs(visionRadius);
+		} 
 	}
 	
 	public void setRow(int row) {

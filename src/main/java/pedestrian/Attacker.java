@@ -18,6 +18,9 @@ public class Attacker extends PedestrianWithVision {
 	
 	public Attacker(int row, int column, PedestrianWithVisionParameters parameters, CellularAutomaton automaton){
 		super(row, column, parameters, automaton);
+		if(visionRadius < 0) {
+			this.visionRadius = Math.abs(visionRadius);
+		} 
 	}
 	
 	public boolean attack() {
