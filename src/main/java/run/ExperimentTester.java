@@ -108,7 +108,7 @@ public class ExperimentTester {
 				Environment environment = Environment.fromFile(mapPath);
 				Domain domain = environment.getDomain(1);
 				ExitEvacuationProblem eep = new ExitEvacuationProblem(environment, environmentNumbers[0], simulation);	
-			    EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation, thisSeed);
+			    EAEvaluator evaluator = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation, thisSeed, false);
 			    EvolutionaryAlgorithm ea = new EvolutionaryAlgorithm(conf);
 			    ea.setObjectiveFunction(evaluator);
 			    		
@@ -193,6 +193,11 @@ public class ExperimentTester {
 			    		
 			    saveData(w, idExperiment, avgFitness, repInfo, bestInRun, evaluator, prefix + "_run_" + idRun);
 			    
+			    // 2ND EXPERIMENT (IF IT IS DEPENDENT OF PREVIOUS EXPERIMENT)
+			    
+			    if(idExperiment == 1) {
+			    	
+			    }
 			   
 			}
 			

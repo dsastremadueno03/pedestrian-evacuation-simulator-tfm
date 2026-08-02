@@ -12,6 +12,7 @@ import es.uma.lcc.caesium.ea.base.Genotype;
 import es.uma.lcc.caesium.ea.base.Individual;
 import es.uma.lcc.caesium.ea.fitness.ContinuousObjectiveFunction;
 import es.uma.lcc.caesium.ea.fitness.OptimizationSense;
+import es.uma.lcc.caesium.ea.util.JsonUtil;
 import es.uma.lcc.caesium.pedestrian.evacuation.optimization.Double2AccessDecoder;
 import es.uma.lcc.caesium.pedestrian.evacuation.optimization.ExitEvacuationProblem;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.CellularAutomatonParameters;
@@ -96,9 +97,10 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	 * @param weightJson Population behavior and weights
 	 * @param simulation Simulation information
 	 * @param seed Seed of the run
+	 * @param isDependent Determines if it is dependent of a previous experiment
 	 */
 	// Objective function
-	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson, SimulationConfiguration simulation, long seed){
+	public EAEvaluator(ExitEvacuationProblem eep, int nExits, int nTempSigns, int nPermSigns, int nPolice, Domain domain, PopulationConfig populationConfig, JsonObject weightJson, SimulationConfiguration simulation, long seed, boolean isDependent){
 		// Number of genes
 		super(nExits + (nTempSigns * 2) + (nPermSigns * 2) + (nPolice * 2), 0, 1);
 		
@@ -117,6 +119,19 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		this.domain = domain;
 		this.populationConfig = populationConfig;
 		this.weightJson = weightJson;
+		// IF DEPENDENT, CHANGE VISION FIELD TO POSITIVE
+		if(isDependent) {
+			JsonObject origVision = (JsonObject) this.weightJson.get("visionRadius");
+			
+			double minLocal = Math.abs(JsonUtil.getDouble(origVision, "min"));
+		    double maxLocal = Math.abs(JsonUtil.getDouble(origVision, "max"));
+		    
+			JsonObject positiveVision = new JsonObject();
+			positiveVision.put("min", minLocal);
+			positiveVision.put("max", maxLocal);
+			
+			this.weightJson.put("visionRadius", positiveVision);
+		}
 		
 		// No easy access to this data, need to calculate it here again
 		floorField =
