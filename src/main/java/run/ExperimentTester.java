@@ -193,10 +193,49 @@ public class ExperimentTester {
 			    		
 			    saveData(w, idExperiment, avgFitness, repInfo, bestInRun, evaluator, prefix + "_run_" + idRun);
 			    
+			    
 			    // 2ND EXPERIMENT (IF IT IS DEPENDENT OF PREVIOUS EXPERIMENT)
 			    
-			    if(idExperiment == 1) {
-			    	
+			    JsonObject visionObj = (JsonObject) weightJson.get("visionRadius");
+			    double visionMinVal = JsonUtil.getDouble(visionObj, "min");
+			    
+			    if (visionMinVal < 0) {
+			    	int idExperimentC2 = idExperiment + 1; // Dependent experiment
+
+			    	// Marked as dependent to change vision radius to positive
+			    	EAEvaluator evaluatorC2 = new EAEvaluator(eep, environmentNumbers[0], environmentNumbers[2], environmentNumbers[1], populationConfig.numPolice(), domain, populationConfig, weightJson, simulation, thisSeed, true);
+
+			    	double[] fitnessesC2 = new double[testSims];
+
+			    	// Test simulations with same seed as previous experiment
+			    	for(int s = 0; s < testSims; s++) {
+			    		long simSeed = Objects.hash(thisSeed, bestInRun.hashCode(), s + 100000);
+			    		Random.random.setSeed(simSeed);
+			    		EAEvaluator.SimulationResult resultC2 = evaluatorC2.getSimulation(bestInRun);
+			    		fitnessesC2[s] = evaluatorC2.getFitness(resultC2.metrics());
+			    	}
+
+			    	double avgFitnessC2 = Descriptive.mean(fitnessesC2);
+
+			    	// Representative median simulation 
+			    	int repIndexC2 = 0;
+			    	double minDiffC2 = Double.MAX_VALUE;
+
+			    	for(int s = 0; s < testSims; s++) {
+			    		double diff = Math.abs(fitnessesC2[s] - avgFitnessC2);
+			    		if(diff < minDiffC2) {
+			    			minDiffC2 = diff;
+			    			repIndexC2 = s;
+			    		}
+			    	}
+
+			    	long repSeedC2 = Objects.hash(thisSeed, bestInRun.hashCode(), repIndexC2 + 100000);
+			    	Random.random.setSeed(repSeedC2);
+			    	EAEvaluator.SimulationResult repInfoC2 = evaluatorC2.getSimulation(bestInRun);
+
+			    	// Save dependent experiment metrics
+			    	saveNewMetricsJSON(prefix, idExperimentC2, idRun, avgFitnessC2, repInfoC2);
+			    	saveRunCSV(w, idExperimentC2, idRun, avgFitnessC2, repInfoC2);
 			    }
 			   
 			}
