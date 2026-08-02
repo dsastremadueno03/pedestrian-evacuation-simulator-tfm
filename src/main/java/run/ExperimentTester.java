@@ -236,6 +236,7 @@ public class ExperimentTester {
 			    	// Save dependent experiment metrics
 			    	saveNewMetricsJSON(prefix, idExperimentC2, idRun, avgFitnessC2, repInfoC2);
 			    	saveRunCSV(w, idExperimentC2, idRun, avgFitnessC2, repInfoC2);
+			    	saveData(w, idExperimentC2, avgFitnessC2, repInfoC2, bestInRun, evaluatorC2, prefix + "_run_" + idRun);
 			    }
 			   
 			}
