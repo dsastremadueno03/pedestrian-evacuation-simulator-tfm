@@ -1,5 +1,6 @@
 package ea;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -118,19 +119,21 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		
 		this.domain = domain;
 		this.populationConfig = populationConfig;
-		this.weightJson = weightJson;
 		// IF DEPENDENT, CHANGE VISION FIELD TO POSITIVE
-		if(isDependent) {
-			JsonObject origVision = (JsonObject) this.weightJson.get("visionRadius");
-			
-			double minLocal = Math.abs(JsonUtil.getDouble(origVision, "min"));
-		    double maxLocal = Math.abs(JsonUtil.getDouble(origVision, "max"));
+		// Clonamos weightJson para no contaminar C1
+		this.weightJson = (JsonObject) weightJson.clone();
+
+		if (isDependent) {
+		    JsonObject origVision = (JsonObject) this.weightJson.get("visionRadius");
 		    
-			JsonObject positiveVision = new JsonObject();
-			positiveVision.put("min", minLocal);
-			positiveVision.put("max", maxLocal);
-			
-			this.weightJson.put("visionRadius", positiveVision);
+		    double minLocal = Math.abs(JsonUtil.getDouble(origVision, "min"));
+		    double maxLocal = Math.abs(JsonUtil.getDouble(origVision, "max"));
+
+		    JsonObject localVision = new JsonObject();
+		    localVision.put("min", BigDecimal.valueOf(minLocal));
+		    localVision.put("max", BigDecimal.valueOf(maxLocal));
+
+		    this.weightJson.put("visionRadius", localVision);
 		}
 		
 		// No easy access to this data, need to calculate it here again

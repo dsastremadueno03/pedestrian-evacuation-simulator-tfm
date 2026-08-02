@@ -1,0 +1,3 @@
+Experiment id,Run id,Fitness,Civilians Evacuated,Civilians Killed,Civilians Trapped,Attackers Alive,Police Alive,Mean Time,Median Time,Mean Steps,Median Steps,Avg.Dist.Exit,Avg.Dist.Attaker,Avg.Dist.Police
+1,13,0.041259963018333685,100,0,0,0,0,16.156923076923075,15.53846153846154,43.96,44.5,0.0,0.0,0.0
+---------------------------------------------------------------------------
