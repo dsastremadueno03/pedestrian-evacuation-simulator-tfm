@@ -120,7 +120,6 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		this.domain = domain;
 		this.populationConfig = populationConfig;
 		// IF DEPENDENT, CHANGE VISION FIELD TO POSITIVE
-		// Clonamos weightJson para no contaminar C1
 		this.weightJson = (JsonObject) weightJson.clone();
 
 		if (isDependent) {
@@ -128,6 +127,11 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		    
 		    double minLocal = Math.abs(JsonUtil.getDouble(origVision, "min"));
 		    double maxLocal = Math.abs(JsonUtil.getDouble(origVision, "max"));
+		    if (minLocal > maxLocal) {
+		    	double a = maxLocal;
+		    	maxLocal = minLocal;
+		    	minLocal = a;
+		    }
 
 		    JsonObject localVision = new JsonObject();
 		    localVision.put("min", BigDecimal.valueOf(minLocal));
