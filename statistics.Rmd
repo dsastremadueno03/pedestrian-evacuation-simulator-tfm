@@ -15,7 +15,7 @@ geometry:
   - left=1.5in
   - right=1.5in
 params: 
-  instances: ["rq1_signals", "rq2_attacker", "rq3_police"]
+  instances: ["rq1_signals_office", "rq2_attacker_office", "rq3_police_office", "rq1_signals_supermarket", "rq2_attacker_supermarket", "rq3_police_supermarket", "rq1_signals_diaphanous", "rq2_attacker_diaphanous", "rq3_police_diaphanous"]
   algorithms: ["numeric"]
   maxevals: 5000
 ---
@@ -26,23 +26,19 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 ```{r data-preparation}
 library(rjson)
+library(dplyr)
 
-# Parámetros generales
 maxevals <- params$maxevals
 
-# ---  ESCANEO INTELIGENTE MULTI-EXPERIMENTO ---
-# Buscamos todos los archivos aceptando cualquier número de experimento (_exp_X_)
-archivos_existentes <- list.files("data/statistics/", pattern = "-stats-.*_exp_.*_run_.*\\.json")
+archivos_existentes <- list.files("data/statistics/", pattern = "-stats-.*_exp_.*_run_.*\\.json$")
 
 if (length(archivos_existentes) == 0) {
   stop("Error: No se ha encontrado ningún archivo JSON en 'data/statistics/'. Revisa la ruta.")
 }
 
-# Regex ampliado para capturar de forma aislada el número de experimento (Grupo 4)
 patron_regex <- "^([^-]+)-stats-(.*?)_exp_(\\d+)_run_\\d+\\.json$"
 matches <- regmatches(archivos_existentes, regexec(patron_regex, archivos_existentes))
 
-# Construimos una tabla de metadatos interna para organizar el inventario de archivos
 meta_files <- data.frame(
   archivo  = archivos_existentes,
   alg_base = sapply(matches, function(x) x[2]),
@@ -51,20 +47,17 @@ meta_files <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# Creamos el identificador combinado que usará R para las columnas y leyendas gráficos
-meta_files$alg_comb <- paste0(meta_files$alg_base, "_exp", meta_files$exp_num)
+# Mapeo limpio para leyendas y cabeceras
+meta_files$alg_comb <- case_when(
+  meta_files$exp_num == "1" ~ "C1 (Sin Señales)",
+  meta_files$exp_num == "3" ~ "C3 (Con Señales)",
+  TRUE ~ paste0("C", meta_files$exp_num)
+)
 
-# Extraemos las dimensiones reales encontradas en el disco
-algorithms <- unique(meta_files$alg_comb)
-instances <- unique(meta_files$instance)
+algorithms <- sort(unique(meta_files$alg_comb))
+instances  <- sort(unique(meta_files$instance))
 
-algorithms <- sort(algorithms)
-instances <- sort(instances)
-
-
-# --- FUNCIONES DE PROCESAMIENTO ---
-
-# Muestreo seguro
+# Funciones de muestreo y agregacion
 sampling <- function (rundata, s, maxevals) {
   if (is.null(rundata) || is.null(rundata$evals) || length(rundata$evals) == 0) {
     numsamples <- floor(maxevals/s)
@@ -77,7 +70,7 @@ sampling <- function (rundata, s, maxevals) {
   
   if (length(first) == 0 || is.na(first)) return(matrix(NA, nrow=numsamples, ncol=2))
 
-  i<-1
+  i <- 1
   for (j in seq(from = 1, to = numsamples)) {
     ev <- j * s;
     mat[j,1] <- ev
@@ -102,14 +95,12 @@ sampling <- function (rundata, s, maxevals) {
   return (mat)
 } 
 
-# Error estándar
 stderror <- function(x) {
   x <- na.omit(x)
   if(length(x) == 0) return(NA)
   sd(x)/sqrt(length(x))
 }
 
-# Agregación de matrices
 statmat <- function(lst, fnc) {        
   if (length(lst) == 0) return(NULL)
   rc <- dim(lst[[1]]) 
@@ -120,7 +111,6 @@ statmat <- function(lst, fnc) {
   return(mat)
 }
 
-# Procesa una ejecución individual
 process_rundata <- function (rundata) {
   s <- 100
   if (is.null(rundata$isols) || is.null(rundata$idata)) {
@@ -148,7 +138,6 @@ process_rundata <- function (rundata) {
   return (mat1)
 }
 
-# Procesa un lote de ejecuciones (runs)
 process_runbatch <- function (data) {
   if (is.null(data) || length(data) == 0) return(NULL)
   stats <- list()
@@ -178,7 +167,6 @@ process_runbatch <- function (data) {
   return (list("mean"=resmean, "se"=resse, "all" = resbestall))
 }
 
-# Extrae soluciones finales
 get_solutions <- function (data) {
   if (is.null(data) || length(data) == 0) return(NULL)
   numruns <- length(data)
@@ -210,8 +198,6 @@ get_solutions <- function (data) {
   return(table_solutions)
 }
 
-
-# --- CARGA MAPEADA EN MATRIZ DUAL ---
 data_list <- vector("list", length(instances) * length(algorithms))
 idx <- 1
 
@@ -220,15 +206,13 @@ for (instance in instances) {
     batch_data <- list()
     run_count <- 1
     
-    # Localizamos qué algoritmo base y número de experimento corresponden a este bloque
     sub_meta <- meta_files[meta_files$instance == instance & meta_files$alg_comb == alg, ]
     
     if (nrow(sub_meta) > 0) {
       alg_base_actual <- sub_meta$alg_base[1]
-      exp_num_actual <- sub_meta$exp_num[1]
+      exp_num_actual  <- sub_meta$exp_num[1]
       
-      # Cargamos los 20 runs correspondientes a este experimento concreto
-      for (r in 0:19) {
+      for (r in 0:29) { # 30 runs
         json_filename <- paste0("data/statistics/", alg_base_actual, "-stats-", instance, "_exp_", exp_num_actual, "_run_", r, ".json")
         
         if (file.exists(json_filename)) {
@@ -254,248 +238,130 @@ for (instance in instances) {
 
 data_processed <- matrix(data = data_list, ncol = length(instances),
                          dimnames = list(algorithms, instances))
-
-# Escapamos los nombres de las instancias para el paracaídas de LaTeX
 instances_escaped <- gsub("_", "\\\\_", instances)
-
-# Limpieza profunda de temporales
-rm(list=c("data_list", "batch_data", "archivos_existentes", "patron_regex", "matches", "meta_files", "sub_meta"))
 ```
 
 # Resultados
 
 
-```{r fitness-evol, fig.cap = "Evolución de fitness promediada (30 ejecuciones y 10 simulaciones por ejecución)", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
+```{r fitness-evol, fig.cap = "Evolución de fitness promediada (30 ejecuciones, 5 simulaciones por evaluación) para C1 (Visión Global) y C3 (Visión Local).", out.width="100%", fig.height=5.5, fig.align="center"}
 library(ggplot2)
 library(scales)
+library(dplyr)
+
+df_evol_all <- data.frame()
 
 for (instance in instances) {
-  has_data <- FALSE
-  for (alg in algorithms) {
-    if (is.list(data_processed[[alg, instance]])) has_data = TRUE
-  }
+  mapa_val <- case_when(
+    grepl("office", instance, ignore.case = TRUE) ~ "Oficina",
+    grepl("supermarket", instance, ignore.case = TRUE) ~ "Supermercado",
+    grepl("diaphanous", instance, ignore.case = TRUE) ~ "Diáfano",
+    TRUE ~ "General"
+  )
+  rq_val <- case_when(
+    grepl("rq1", instance, ignore.case = TRUE) ~ "RQ1 (Señales)",
+    grepl("rq2", instance, ignore.case = TRUE) ~ "RQ2 (Atacante)",
+    grepl("rq3", instance, ignore.case = TRUE) ~ "RQ3 (Policías)",
+    TRUE ~ "General"
+  )
   
-  if (has_data) {
-    may <- 0; miy <- Inf
-    for (alg in algorithms) {
-      if (is.list(data_processed[[alg, instance]])) {
-        val_mean <- data_processed[[alg, instance]]$rundata$mean$best
-        val_se <- data_processed[[alg, instance]]$rundata$se$best
-        if (!is.null(val_mean)) {
-          val_top <- (val_mean + val_se)
-          val_bot <- (val_mean - val_se)
-          val_top <- val_top[is.finite(val_top)]
-          val_bot <- val_bot[is.finite(val_bot)]
-          
-          if(length(val_top) > 0) may <- max(may, max(val_top), na.rm=TRUE)
-          if(length(val_bot) > 0) miy <- min(miy, min(val_bot), na.rm=TRUE)
-        }
+  for (alg in algorithms) {
+    if (is.list(data_processed[[alg, instance]])) {
+      rd <- data_processed[[alg, instance]][["rundata"]]
+      if (!is.null(rd$mean)) {
+        
+        # Etiqueta precisa de visión
+        alg_label <- ifelse(grepl("exp3", alg) || grepl("C3", alg), "C3 (Visión Local)", "C1 (Visión Global)")
+        
+        temp <- data.frame(
+          evals = rd[["mean"]]$evals,
+          best  = rd[["mean"]]$best,
+          se    = rd[["se"]]$best,
+          alg   = alg_label,
+          Mapa  = mapa_val,
+          RQ    = rq_val,
+          stringsAsFactors = FALSE
+        )
+        temp$best[temp$best < 1e-4] <- 1e-4
+        df_evol_all <- rbind(df_evol_all, temp)
       }
-    }
-    
-    # Suelo de seguridad: si baja de 1e-4 o es 0, fijamos el límite en 1e-4 
-    # para que la escala log10 no crashee y permita ver la unidad E-4 perfectamente.
-    if (miy <= 0 || miy < 1e-4) {
-      miy <- 1e-4
-    }
-    if (may <= miy) {
-      may <- miy * 10
-    }
-    
-    df_plot <- data.frame()
-    for (alg in algorithms) {
-      if (is.list(data_processed[[alg, instance]])) {
-        rd <- data_processed[[alg, instance]][["rundata"]]
-        if (!is.null(rd$mean)) {
-           temp <- data.frame(
-             evals = rd[["mean"]]$evals,
-             best = rd[["mean"]]$best,
-             se = rd[["se"]]$best,
-             alg = alg
-           )
-           # Ajustamos los valores del dataframe al suelo mínimo para evitar distorsiones logarítmicas
-           temp$best[temp$best < 1e-4] <- 1e-4
-           df_plot <- rbind(df_plot, temp)
-        }
-      }
-    }
-    
-    if (nrow(df_plot) > 0) {
-      p <- ggplot(data=df_plot, aes(x=evals, color = alg, group = alg)) + 
-        geom_line(aes(y=best)) +
-        geom_point(aes(y=best), size=2) + 
-        geom_ribbon(aes(ymin=pmax(best-se, 1e-4), ymax=best+se), fill='black', alpha=0.2) +
-        coord_cartesian(ylim=c(miy, may)) +
-        xlab("Evaluaciones") + ylab("Fitness") + 
-        scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) + # Escala logarítmica con formato X.XXE-X
-        ggtitle(instance) + theme_bw() + labs(color = "") + 
-        theme(aspect.ratio=1, legend.position = "bottom")
-      show(p)
     }
   }
+}
+
+if (nrow(df_evol_all) > 0) {
+  ggplot(df_evol_all, aes(x = evals, y = best, color = alg, group = alg)) +
+    geom_line(linewidth = 0.8) +
+    geom_ribbon(aes(ymin = pmax(best - se, 1e-4), ymax = best + se, fill = alg), alpha = 0.15, color = NA) +
+    scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) +
+    scale_color_manual(values = c("C1 (Visión Global)" = "#e74c3c", "C3 (Visión Local)" = "#1abc9c")) +
+    scale_fill_manual(values = c("C1 (Visión Global)" = "#e74c3c", "C3 (Visión Local)" = "#1abc9c")) +
+    facet_grid(RQ ~ Mapa, scales = "free_y") +
+    labs(
+      x = "Evaluaciones",
+      y = "Fitness Promedio (Escala Log10)",
+      color = "Configuración",
+      fill = "Configuración"
+    ) +
+    theme_bw(base_size = 9) +
+    theme(
+      legend.position = "bottom",
+      strip.background = element_rect(fill = "#f0f0f0"),
+      strip.text = element_text(face = "bold")
+    )
 }
 ```
 
 ```{r test-data-preparation, echo=FALSE, message=FALSE, warning=FALSE}
 library(jsonlite)
 library(dplyr)
+library(stringr)
 
-# Cargamos todos los archivos de testing del disco
-test_files <- list.files("data/simulations/", pattern = "^test-stats-.*_exp_.*_run_.*\\.json$")
+# Cargamos todos los archivos de resultado y simulación
+results_files <- list.files("data/results/", pattern = "^result_.*\\.json$", full.names = TRUE)
+test_files    <- list.files("data/simulations/", pattern = "^test-stats-.*\\.json$", full.names = TRUE)
 
-df_testing <- data.frame()
-
-if (length(test_files) > 0) {
-  df_testing <- do.call(rbind, lapply(test_files, function(f) {
-    filepath <- paste0("data/simulations/", f)
-    json_data <- tryCatch(fromJSON(filepath), error = function(e) NULL)
-    
-    if (!is.null(json_data)) {
-      data.frame(
-        experiment = paste0("exp", json_data$idExperiment),
-        run        = paste0("run_", json_data$idRun),
-        avg_train  = json_data$avgFitness,
-        sim_fitness = json_data$testSimulations,
-        stringsAsFactors = FALSE
-      )
-    } else {
-      NULL
-    }
-  }))
+# Función auxiliar para extraer metadatos del nombre de archivo
+parse_metadata <- function(filename) {
+  map_type <- "Desconocido"
+  if (grepl("office", filename, ignore.case = TRUE)) map_type <- "Oficina"
+  if (grepl("supermarket", filename, ignore.case = TRUE)) map_type <- "Supermercado"
+  if (grepl("diaphanous", filename, ignore.case = TRUE)) map_type <- "Diáfano"
+  
+  rq_label <- "RQ1 (Señales)"
+  if (grepl("rq2", filename, ignore.case = TRUE)) rq_label <- "RQ2 (Atacante)"
+  if (grepl("rq3", filename, ignore.case = TRUE)) rq_label <- "RQ3 (Policías)"
+  
+  return(list(map = map_type, rq = rq_label))
 }
 ```
 
-```{r test-robustness-rq1, echo=FALSE, fig.cap="RQ1 (Señales): Evaluación de robustez en test de estrés.", out.width="90%", fig.height=4, fig.align="center"}
+```{r test-robustness-all, echo=FALSE, fig.cap="Evaluación de robustez en test de estrés (1.000 sims) comparando todas las configuraciones por Mapa y RQ.", out.width="100%", fig.height=6, fig.align="center"}
 library(ggplot2)
 library(scales)
-library(dplyr)
-library(jsonlite)
 
-# Ruta corregida a data/simulations/
-test_files <- list.files("data/simulations/", pattern = "^test-stats-.*\\.json$", full.names = TRUE)
-
-if (length(test_files) == 0) {
-  # Si no los encuentra por el prefijo test-stats-, busca cualquier .json en simulations/
-  test_files <- list.files("data/simulations/", pattern = "\\.json$", full.names = TRUE)
-}
-
-if (length(test_files) == 0) {
-  ggplot() + 
-    annotate("text", x = 1, y = 1, 
-             label = "ATENCIÓN: No se encontraron archivos JSON en 'data/simulations/'", 
-             color = "red", size = 4) +
-    theme_void()
+if (exists("tabla_datos") && !is.null(tabla_datos) && nrow(tabla_datos) > 0) {
   
-} else {
-  
-  # Carga de datos desde simulations/
-  df_rq1 <- do.call(rbind, lapply(test_files, function(filepath) {
-    json_data <- tryCatch(fromJSON(filepath), error = function(e) NULL)
-    if (!is.null(json_data) && !is.null(json_data$testSimulations)) {
-      data.frame(
-        experiment = paste0("exp", json_data$idExperiment),
-        run        = paste0("run_", json_data$idRun),
-        simFitness = json_data$testSimulations,
-        stringsAsFactors = FALSE
-      )
-    } else {
-      NULL
-    }
-  }))
+  df_plot <- tabla_datos
+  df_plot$Test_Mean[df_plot$Test_Mean < 1e-4] <- 1e-4
 
-  if (is.null(df_rq1) || nrow(df_rq1) == 0) {
-    ggplot() + 
-      annotate("text", x = 1, y = 1, 
-               label = "ATENCIÓN: Se encontraron archivos en 'data/simulations/' pero no contienen 'testSimulations'", 
-               color = "red", size = 4) +
-    theme_void()
-  } else {
-    
-    # Suelo protector logarítmico
-    df_rq1$simFitness[df_rq1$simFitness < 1e-4] <- 1e-4
-
-    # Generación del gráfico con Boxplots limpios
-    p_rq1 <- ggplot(df_rq1, aes(x = experiment, y = simFitness, fill = experiment)) +
-      geom_boxplot(outlier.color = "red", outlier.alpha = 0.2, outlier.size = 0.8, alpha = 0.7, width = 0.4) +
-      scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) +
-      labs(title = "RQ1 - Evaluación de Robustez en Test (1.000 sims/run)",
-           subtitle = "Comparativa masiva de distribución de fitness para RQ1",
-           x = "Configuración / Experimento",
-           y = "Fitness de Test (Log10)") +
-      theme_bw(base_size = 11) +
-      theme(legend.position = "none")
-    
-    plot(p_rq1)
-  }
-}
-```
-
-```{r test-robustness-rq2-rq3, echo=FALSE, fig.cap="Evaluación de robustez en test para RQ2 (Atacante) y RQ3 (Policías) agrupando todas las ejecuciones (1.000 evaluaciones por run).", out.width="90%", fig.height=4, fig.align="center"}
-library(ggplot2)
-library(scales)
-library(dplyr)
-library(jsonlite)
-
-# 1. Carga de archivos de test para RQ2 y RQ3 desde data/simulations/
-test_files_rq2 <- list.files("data/simulations/", pattern = "^test-stats-rq2_attacker_.*\\.json$", full.names = TRUE)
-test_files_rq3 <- list.files("data/simulations/", pattern = "^test-stats-rq3_police_.*\\.json$", full.names = TRUE)
-
-test_files_combined <- c(test_files_rq2, test_files_rq3)
-
-if (length(test_files_combined) == 0) {
-  ggplot() + 
-    annotate("text", x = 1, y = 1, 
-             label = "ATENCIÓN: No se encontraron archivos de test para RQ2 o RQ3 en 'data/simulations/'", 
-             color = "red", size = 4) +
-    theme_void()
-} else {
-  
-  # 2. Cargar y etiquetar cada dataset por su Pregunta de Investigación
-  df_rq2_rq3 <- do.call(rbind, lapply(test_files_combined, function(filepath) {
-    json_data <- tryCatch(fromJSON(filepath), error = function(e) NULL)
-    if (!is.null(json_data) && !is.null(json_data$testSimulations)) {
-      
-      # Identificar si pertenece a RQ2 o RQ3
-      rq_label <- if (grepl("rq2_attacker", filepath)) "RQ2 (Atacante)" else "RQ3 (Policías)"
-      
-      data.frame(
-        rq         = rq_label,
-        experiment = paste0("exp", json_data$idExperiment),
-        run        = paste0("run_", json_data$idRun),
-        simFitness = json_data$testSimulations,
-        stringsAsFactors = FALSE
-      )
-    } else {
-      NULL
-    }
-  }))
-
-  if (is.null(df_rq2_rq3) || nrow(df_rq2_rq3) == 0) {
-    ggplot() + 
-      annotate("text", x = 1, y = 1, 
-               label = "ATENCIÓN: Se encontraron archivos pero no contenían la clave 'testSimulations'", 
-               color = "red", size = 4) +
-      theme_void()
-  } else {
-    
-    # 3. Suelo de protección para la escala logarítmica
-    df_rq2_rq3$simFitness[df_rq2_rq3$simFitness < 1e-4] <- 1e-4
-
-    # 4. Gráfica combinada RQ2 y RQ3 lado a lado con facet_wrap
-    p_rq2_rq3 <- ggplot(df_rq2_rq3, aes(x = experiment, y = simFitness, fill = rq)) +
-      geom_boxplot(outlier.color = "red", outlier.alpha = 0.2, outlier.size = 0.8, alpha = 0.7, width = 0.4) +
-      scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) +
-      scale_fill_manual(values = c("RQ2 (Atacante)" = "#e67e22", "RQ3 (Policías)" = "#2980b9")) +
-      facet_wrap(~rq, scales = "free_x") +
-      labs(title = " RQ2 - RQ3 - Evaluación de Robustez en Test (1.000 sims/run)",
-           subtitle = "Comparativa masiva de distribución de fitness para RQ2 y RQ3",
-           x = "Configuración / Experimento",
-           y = "Fitness de Test (Log10)") +
-      theme_bw(base_size = 11) +
-      theme(legend.position = "none")
-    
-    plot(p_rq2_rq3)
-  }
+  ggplot(df_plot, aes(x = Configuracion, y = Test_Mean, fill = Configuracion)) +
+    geom_boxplot(outlier.color = "red", outlier.alpha = 0.3, outlier.size = 0.8, alpha = 0.7) +
+    scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) +
+    facet_grid(RQ ~ Mapa, scales = "free_y") +
+    labs(
+      x = "Configuración / Experimento",
+      y = "Fitness de Test (Escala Log10)",
+      fill = "Configuración"
+    ) +
+    theme_bw(base_size = 9) +
+    theme(
+      legend.position = "bottom",
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      strip.background = element_rect(fill = "#e0e0e0"),
+      strip.text = element_text(face = "bold")
+    )
 }
 ```
 
@@ -506,172 +372,197 @@ library(knitr)
 library(kableExtra)
 library(dplyr)
 library(jsonlite)
+library(purrr)
 
-test_files <- list.files("data/simulations/", pattern = "^test-stats-.*\\.json$", full.names = TRUE)
+test_files    <- list.files("data/simulations/", pattern = "^test-stats-.*\\.json$", full.names = TRUE)
+results_files <- list.files("data/results/", pattern = "^result_.*\\.json$", full.names = TRUE)
 
-if (length(test_files) > 0) {
+parse_entry <- function(filepath) {
+  j <- tryCatch(fromJSON(filepath), error = function(e) NULL)
+  if (is.null(j)) return(NULL)
   
-  df_list <- list()
+  fname  <- basename(filepath)
+  exp_id <- if (!is.null(j$idExperiment)) j$idExperiment else if (!is.null(j$experiment)) j$experiment else 1
+  run_id <- if (!is.null(j$idRun)) j$idRun else if (!is.null(j$run)) j$run else 0
   
-  for (f_test in test_files) {
-    json_test <- tryCatch(fromJSON(f_test), error = function(e) NULL)
-    
-    if (!is.null(json_test) && !is.null(json_test$testSimulations)) {
-      exp_id <- json_test$idExperiment
-      run_id <- json_test$idRun
-      
-      # 1. Identificar RQ/Instancia por nombre de archivo
-      rq_name <- "RQ1 (Signals)"
-      if (grepl("rq2_attacker", f_test)) {
-        rq_name <- "RQ2 (Attacker)"
-      } else if (grepl("rq3_police", f_test)) {
-        rq_name <- "RQ3 (Police)"
-      }
-      
-      # 2. Buscar archivo de entrenamiento correspondiente
-      instance_prefix <- gsub(".*test-stats-(.*)_exp_.*", "\\1", basename(f_test))
-      pattern_train   <- paste0(".*", instance_prefix, ".*_exp_", exp_id, "_run_", run_id, "\\.json$")
-      f_train         <- list.files("data/statistics/", pattern = pattern_train, full.names = TRUE)[1]
-      
-      train_fitness <- NA
-      if (!is.na(f_train) && file.exists(f_train)) {
-        json_train <- tryCatch(fromJSON(f_train, simplifyVector = FALSE), error = function(e) NULL)
-        if (!is.null(json_train)) {
-          try({
-            if (is.list(json_train) && length(json_train) > 0) {
-              first_elem <- json_train[[1]]
-              if ("rundata" %in% names(first_elem)) {
-                isols <- first_elem$rundata[[1]]$isols
-                if (!is.null(isols$fitness)) {
-                  train_fitness <- tail(isols$fitness, 1)[[1]]
-                }
-              }
-            }
-          }, silent = TRUE)
+  mapa_val <- case_when(
+    grepl("office", fname, ignore.case = TRUE) ~ "Oficina",
+    grepl("supermarket", fname, ignore.case = TRUE) ~ "Supermercado",
+    grepl("diaphanous", fname, ignore.case = TRUE) ~ "Diáfano",
+    TRUE ~ "General"
+  )
+  
+  rq_val <- case_when(
+    grepl("rq1", fname, ignore.case = TRUE) ~ "RQ1 (Señales)",
+    grepl("rq2", fname, ignore.case = TRUE) ~ "RQ2 (Atacante)",
+    grepl("rq3", fname, ignore.case = TRUE) ~ "RQ3 (Policías)",
+    TRUE ~ "General"
+  )
+  
+  is_c2 <- grepl("_c2", fname, ignore.case = TRUE) || exp_id == 2 || exp_id == 101
+  is_c3 <- (exp_id == 3 || (exp_id == 2 && !is_c2)) && !grepl("_c2", fname, ignore.case = TRUE)
+  
+  mode_tag <- case_when(
+    is_c2 ~ "C2 (Visión Local - Sin Señales)",
+    is_c3 ~ "C3 (Visión Local - Con Señales)",
+    TRUE  ~ "C1 (Visión Global)"
+  )
+  
+  exp_train_id <- if (is_c2) 1 else if (is_c3) 3 else exp_id
+  clean_instance <- gsub(".*(test-stats|result_)-(.*)_exp_.*", "\\2", fname)
+  clean_instance <- gsub("_c2$", "", clean_instance)
+  pattern_train   <- paste0(".*", clean_instance, ".*_exp_", exp_train_id, "_run_", run_id, "\\.json$")
+  f_train         <- list.files("data/statistics/", pattern = pattern_train, full.names = TRUE)[1]
+  
+  train_fitness <- NA
+  if (!is.na(f_train) && file.exists(f_train)) {
+    json_train <- tryCatch(fromJSON(f_train, simplifyVector = FALSE), error = function(e) NULL)
+    if (!is.null(json_train) && length(json_train) > 0) {
+      try({
+        isols <- json_train[[1]]$rundata[[1]]$isols
+        if (!is.null(isols$fitness)) {
+          train_fitness <- tail(isols$fitness, 1)[[1]]
         }
-      }
-      
-      if (is.na(train_fitness) || length(train_fitness) == 0) {
-        train_fitness <- json_test$avgFitness
-      }
-      
-      df_list[[length(df_list) + 1]] <- data.frame(
-        Instancia     = rq_name,
-        Exp           = paste0("exp", exp_id),
-        Run           = paste0("run\\_", run_id),
-        run_num       = as.numeric(run_id),
-        Train_Fitness = round(as.numeric(train_fitness), 6),
-        Test_Mean     = round(mean(json_test$testSimulations, na.rm = TRUE), 6),
-        Test_Median   = round(median(json_test$testSimulations, na.rm = TRUE), 6),
-        Test_IQR      = round(IQR(json_test$testSimulations, na.rm = TRUE), 6),
-        stringsAsFactors = FALSE
-      )
+      }, silent = TRUE)
     }
   }
   
-  tabla_datos <- do.call(rbind, df_list)
-  
-  if (!is.null(tabla_datos) && nrow(tabla_datos) > 0) {
-    
-    tabla_final <- tabla_datos %>%
-      arrange(Instancia, Exp, run_num) %>%
-      select(-run_num)
-    
-    # Renderizado seguro en LaTeX
-    kbl(
-      tabla_final,
-      format = "latex",
-      escape = FALSE,
-      booktabs = TRUE,
-      longtable = TRUE,
-      centering = TRUE,
-      caption = "Comparativa del Mejor Fitness en Entrenamiento frente al Test de Estrés (1.000 sims).",
-      col.names = c("Instancia", "Exp.", "Run", "Train (Fitness)", "Test (Mean)", "Test (Median)", "Test (IQR)")
-    ) %>%
-      kable_styling(
-        latex_options = c("repeat_header"),
-        font_size = 8
-      )
+  if (is.na(train_fitness) || length(train_fitness) == 0) {
+    train_fitness <- if (!is.null(j$avgFitness)) j$avgFitness else j$fitness
   }
+  
+  if (!is.null(j$testSimulations) && length(j$testSimulations) > 0) {
+    t_mean   <- mean(j$testSimulations, na.rm = TRUE)
+    t_median <- median(j$testSimulations, na.rm = TRUE)
+    t_iqr    <- IQR(j$testSimulations, na.rm = TRUE)
+  } else {
+    t_mean   <- if (!is.null(j$fitness)) j$fitness else NA
+    t_median <- if (!is.null(j$fitness)) j$fitness else NA
+    t_iqr    <- 0
+  }
+  
+  if (is.na(t_mean)) return(NULL)
+  
+  data.frame(
+    Mapa          = mapa_val,
+    RQ            = rq_val,
+    Instancia     = rq_val,
+    Configuracion = mode_tag,
+    Exp           = mode_tag,
+    Run           = as.numeric(run_id),
+    Train_Fitness = as.numeric(train_fitness),
+    Test_Mean     = as.numeric(t_mean),
+    Test_Median   = as.numeric(t_median),
+    Test_IQR      = as.numeric(t_iqr),
+    stringsAsFactors = FALSE
+  )
+}
+
+list_sims <- lapply(test_files, parse_entry) %>% compact()
+df_sims   <- if (length(list_sims) > 0) do.call(rbind, list_sims) else data.frame()
+
+list_res <- lapply(results_files, parse_entry) %>% compact()
+df_res   <- if (length(list_res) > 0) do.call(rbind, list_res) else data.frame()
+
+if (nrow(df_sims) > 0 && nrow(df_res) > 0) {
+  df_res_missing <- anti_join(df_res, df_sims, by = c("Mapa", "RQ", "Configuracion", "Run"))
+  tabla_datos <- rbind(df_sims, df_res_missing)
+} else if (nrow(df_sims) > 0) {
+  tabla_datos <- df_sims
+} else {
+  tabla_datos <- df_res
+}
+
+if (!is.null(tabla_datos) && nrow(tabla_datos) > 0) {
+  tabla_resumen <- tabla_datos %>%
+    group_by(Mapa, RQ, Configuracion) %>%
+    summarise(
+      `Train (Media)` = sprintf("%.2e", mean(Train_Fitness, na.rm = TRUE)),
+      `Test (Media)`  = sprintf("%.4f", mean(Test_Mean, na.rm = TRUE)),
+      `Test (Mediana)`= sprintf("%.4f", mean(Test_Median, na.rm = TRUE)),
+      `Test (IQR)`    = sprintf("%.4f", mean(Test_IQR, na.rm = TRUE)),
+      .groups = "drop"
+    ) %>%
+    arrange(Mapa, RQ, Configuracion)
+  
+  kbl(
+    tabla_resumen,
+    format = "latex",
+    booktabs = TRUE,
+    centering = TRUE,
+    caption = "Resumen de Fitness: Entrenamiento frente a Test de Estrés desglosado por Mapa y Visión.",
+    col.names = c("Mapa", "RQ", "Configuración", "Train (Media)", "Test (Media)", "Test (Mediana)", "Test (IQR)")
+  ) %>%
+    kable_styling(latex_options = c("HOLD_position", "scale_down"), font_size = 8) %>%
+    collapse_rows(columns = 1:2, latex_hline = "major")
 }
 ```
 
-```{r train-vs-test-scatter, echo=FALSE, fig.cap="Correlación entre Fitness de Entrenamiento y Test por Experimento.", out.width="100%", fig.height=4.5, fig.align="center"}
+```{r train-vs-test-scatter, echo=FALSE, fig.cap="Correlación entre Fitness de Entrenamiento y Test por Experimento.", out.width="100%", fig.height=5, fig.align="center"}
 library(ggplot2)
 library(scales)
 
 if (exists("tabla_datos") && !is.null(tabla_datos) && nrow(tabla_datos) > 0) {
-  ggplot(tabla_datos, aes(x = Train_Fitness, y = Test_Mean, color = Exp, shape = Exp)) +
-    geom_point(size = 2.5, alpha = 0.85) +
-    
-    # Eje X en log10 pero con formato científico estándar y limpio
+  
+  ggplot(tabla_datos, aes(x = Train_Fitness, y = Test_Mean, color = Configuracion, shape = Configuracion)) +
+    geom_point(size = 2.2, alpha = 0.8) +
     scale_x_log10(
       labels = label_scientific(digits = 2),
-      guide = guide_axis(angle = 30) # Inclinación suave
+      guide = guide_axis(angle = 30)
     ) +
-    
-    # Eje Y con escala adaptada: usa decimales continuos para valores cercanos a 1-5, o científico si es muy pequeño
     scale_y_continuous(
-      labels = label_number(accuracy = 0.01) # Muestra números normales como 0.00, 0.50, 4.50, 5.00
+      labels = label_number(accuracy = 0.01)
     ) +
-    
-    facet_wrap(~ Instancia, scales = "free") + # Permite que los ejes se adapten al rango de cada RQ
-    
+    facet_grid(RQ ~ Mapa, scales = "free") +
     labs(
       title = "Evaluación de Generalización por Experimento",
       x = "Fitness en Entrenamiento",
       y = "Media de Fitness en Test",
-      color = "Experimento",
-      shape = "Experimento"
+      color = "Configuración",
+      shape = "Configuración"
     ) +
-    theme_bw(base_size = 10) +
+    theme_bw(base_size = 9) +
     theme(
       legend.position = "bottom",
       strip.background = element_rect(fill = "#f0f0f0"),
       strip.text = element_text(face = "bold"),
-      panel.spacing = unit(1.2, "lines"), # Más espacio horizontal entre gráficas
-      axis.text.x = element_text(size = 8),
-      axis.text.y = element_text(size = 8)
+      panel.spacing = unit(1, "lines")
     )
 }
 ```
 
-```{r solutions, fig.cap = "Comparativa de eficiencia: Distribución de fitness final (Menor es mejor)", fig.subcap=instances_escaped, out.width=paste0(100/length(instances), "%")}
+```{r solutions, fig.cap = "Comparativa de eficiencia: Distribución del fitness final en test comparando C1, C2 y C3 por Mapa y Pregunta de Investigación.", out.width="100%", fig.height=5.5, fig.align="center"}
 library(ggplot2)
 library(scales)
 
-for (instance in instances) {
-  df_boxplot <- data.frame()
-  has_data <- FALSE
+if (exists("tabla_datos") && !is.null(tabla_datos) && nrow(tabla_datos) > 0) {
   
-  for (alg in algorithms) {
-    if (is.list(data_processed[[alg, instance]])) {
-      sols <- data_processed[[alg, instance]][["sols"]]
-      
-      if (!is.null(sols) && !is.null(sols$fitness) && length(sols$fitness) > 0) {
-        # Aplicamos el suelo protector en los datos en bruto del boxplot
-        safe_fitness <- sols$fitness
-        safe_fitness[safe_fitness < 1e-4] <- 1e-4
-        
-        df_boxplot <- rbind(df_boxplot, data.frame(Operador = alg, Fitness = safe_fitness))
-        has_data <- TRUE
-      }
-    }
-  }
-  
-  if (has_data && nrow(df_boxplot) > 0) {
-    p <- ggplot(df_boxplot, aes(x = Operador, y = Fitness, fill = Operador)) +
-      geom_boxplot(alpha = 0.7, outlier.shape = NA) +
-      geom_jitter(width = 0.2, alpha = 0.5, color="black") +
-      labs(title = paste("Instancia:", instance),
-           subtitle = "Distribución del fitness final entre ejecuciones",
-           x = "Algoritmo / Operador",
-           y = "Fitness Final") +
-      theme_bw() + 
-      scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) + # Misma escala científica y logarítmica
-      theme(aspect.ratio = 0.8, legend.position = "none")
-    show(p)
-  }
+  df_plot <- tabla_datos
+  df_plot$Test_Mean[df_plot$Test_Mean < 1e-4] <- 1e-4
+
+  ggplot(df_plot, aes(x = Configuracion, y = Test_Mean, fill = Configuracion)) +
+    geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+    geom_jitter(width = 0.2, alpha = 0.4, color = "black", size = 0.9) +
+    scale_y_continuous(trans = "log10", labels = scales::label_scientific(digits = 2)) +
+    scale_fill_manual(values = c(
+      "C1 (Visión Global)" = "#e74c3c", 
+      "C2 (Visión Local - Sin Señales)" = "#2ecc71", 
+      "C3 (Visión Local - Con Señales)" = "#3498db"
+    )) +
+    facet_grid(RQ ~ Mapa, scales = "free_y") +
+    labs(
+      x = "Configuración / Experimento",
+      y = "Fitness de Test (Escala Log10)",
+      fill = "Configuración"
+    ) +
+    theme_bw(base_size = 9) +
+    theme(
+      legend.position = "bottom",
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      strip.background = element_rect(fill = "#e0e0e0"),
+      strip.text = element_text(face = "bold")
+    )
 }
 ```
 
@@ -819,44 +710,55 @@ table_fitness %>%
 ```{r load-multitrace-data, include=FALSE}
 library(jsonlite)
 library(dplyr)
-library(ggplot2)
-library(tidyr)
 library(purrr)
 
 trace_files <- list.files("data/traces", pattern = "^trace_.*\\.json$", full.names = TRUE)
 
-load_single_trace <- function(f_trace) {
+# Pre-cargamos la lista de coordenadas de una sola vez para no escanear el disco en bucle
+coord_files <- list.files("data/traces", pattern = "^coordinates_.*\\.json$", full.names = TRUE)
+
+load_single_trace_fast <- function(f_trace) {
   base_id <- gsub("^trace_", "", gsub("\\.json$", "", basename(f_trace)))
   
-  f_coords <- file.path("data/traces", paste0("coordinates_", base_id, ".json"))
-  f_result <- list.files("data/results", pattern = paste0("^result_.*", base_id, ".*\\.json$"), full.names = TRUE)[1]
+  rq_label <- "RQ1 (Señales)"
+  if (grepl("rq2", base_id, ignore.case = TRUE)) rq_label <- "RQ2 (Atacante)"
+  if (grepl("rq3", base_id, ignore.case = TRUE)) rq_label <- "RQ3 (Policías)"
   
-  rq_label <- "RQ1 (Signals)"
-  if (grepl("rq2", base_id, ignore.case = TRUE)) rq_label <- "RQ2 (Attacker)"
-  if (grepl("rq3", base_id, ignore.case = TRUE)) rq_label <- "RQ3 (Police)"
-  
-  trace_json <- tryCatch(fromJSON(f_trace, simplifyVector = FALSE), error = function(e) NULL)
+  # 1. Parseo automático simplificado (jsonlite convierte arreglos directamente a data.frame)
+  trace_json <- tryCatch(fromJSON(f_trace, simplifyVector = TRUE), error = function(e) NULL)
   if (is.null(trace_json) || is.null(trace_json$snapshots)) return(NULL)
   
-  positions <- lapply(trace_json$snapshots, function(snap) {
-    t_val <- snap$timestamp
-    lapply(snap$crowd, function(p) {
-      data.frame(
-        time = t_val,
-        id = paste0(base_id, "_p", p$id),
-        ped_id = p$id,
-        x = p$location$coordinates$X,
-        y = p$location$coordinates$Y,
-        sim_id = base_id,
-        rq = rq_label,
+  snaps <- trace_json$snapshots
+  if (length(snaps) == 0) return(NULL)
+  
+  # 2. Extracción vectorizada limpia (sin hacer data.frame por peatón)
+  positions_list <- vector("list", nrow(snaps))
+  
+  for (i in seq_len(nrow(snaps))) {
+    t_val <- snaps$timestamp[i]
+    crowd_df <- snaps$crowd[[i]]
+    
+    if (!is.null(crowd_df) && nrow(crowd_df) > 0) {
+      positions_list[[i]] <- data.frame(
+        time    = t_val,
+        id      = paste0(base_id, "_p", crowd_df$id),
+        ped_id  = crowd_df$id,
+        x       = crowd_df$location$coordinates$X,
+        y       = crowd_df$location$coordinates$Y,
+        sim_id  = base_id,
+        rq      = rq_label,
         stringsAsFactors = FALSE
       )
-    }) %>% bind_rows()
-  }) %>% bind_rows()
+    }
+  }
   
+  positions <- bind_rows(positions_list)
+  
+  # 3. Carga rápida de salidas/coordenadas
   coords_df <- NULL
-  if (file.exists(f_coords)) {
-    coords_json <- tryCatch(fromJSON(f_coords), error = function(e) NULL)
+  f_coords <- coord_files[grepl(paste0("coordinates_", base_id, "\\.json$"), coord_files)]
+  if (length(f_coords) > 0 && file.exists(f_coords[1])) {
+    coords_json <- tryCatch(fromJSON(f_coords[1], simplifyVector = TRUE), error = function(e) NULL)
     if (!is.null(coords_json$exits)) {
       coords_df <- as.data.frame(coords_json$exits) %>%
         mutate(sim_id = base_id, rq = rq_label)
@@ -866,40 +768,44 @@ load_single_trace <- function(f_trace) {
   return(list(positions = positions, exits = coords_df))
 }
 
-all_data <- lapply(trace_files, load_single_trace) %>% compact()
+# Ejecución paralela o mapeada rápida
+all_data <- lapply(trace_files, load_single_trace_fast) %>% compact()
 
 all_positions <- lapply(all_data, `[[`, "positions") %>% bind_rows()
 all_exits     <- lapply(all_data, `[[`, "exits") %>% bind_rows()
 ```
 
-```{r heatmap-density, echo=FALSE, fig.cap="Mapa de calor de densidad y ocupación espacial agregada por escenario.", out.width="100%", fig.height=4, fig.align="center"}
+```{r heatmap-density, echo=FALSE, fig.cap="Mapa de calor de densidad espacial separado por entorno y pregunta de investigación.", out.width="100%", fig.height=6, fig.align="center"}
 if (exists("all_positions") && nrow(all_positions) > 0) {
+  
+  # Asignar metadatos de mapa a cada posición
+  all_positions <- all_positions %>%
+    mutate(mapa = case_when(
+      grepl("office", sim_id, ignore.case = TRUE) ~ "Oficina",
+      grepl("supermarket", sim_id, ignore.case = TRUE) ~ "Supermercado",
+      grepl("diaphanous", sim_id, ignore.case = TRUE) ~ "Diáfano",
+      TRUE ~ "General"
+    ))
+
   ggplot(all_positions, aes(x = x, y = y)) +
     stat_density_2d(aes(fill = after_stat(level)), geom = "polygon", alpha = 0.6) +
     scale_fill_viridis_c(option = "inferno", name = "Densidad") +
-    {if (!is.null(all_exits) && nrow(all_exits) > 0) 
-      geom_point(data = all_exits, aes(x = X, y = Y), color = "green", size = 2.5, shape = 18, inherit.aes = FALSE)} +
-    facet_wrap(~ rq) +
-    labs(
-      title = NULL,
-      x = "Coordenada X (m)",
-      y = "Coordenada Y (m)"
-    ) +
-    theme_bw(base_size = 10) +
+    facet_grid(rq ~ mapa, scales = "free") +
+    labs(x = "Coordenada X (m)", y = "Coordenada Y (m)") +
+    theme_bw(base_size = 9) +
     theme(
       strip.background = element_rect(fill = "#f0f0f0"),
-      strip.text = element_text(face = "bold")
-    ) +
-    coord_fixed()
+      strip.text = element_text(face = "bold"),
+      aspect.ratio = 1 # Mantiene los paneles cuadrados de forma compatible con escalas libres
+    )
 }
 ```
 
-```{r trajectories-sample, echo=FALSE, fig.cap="Trayectorias individuales de movimiento de los agentes durante la evacuación.", out.width="100%", fig.height=4, fig.align="center"}
+```{r trajectories-sample, echo=FALSE, fig.cap="Trayectorias individuales de movimiento de los agentes durante la evacuación.", out.width="100%", fig.height=6, fig.align="center"}
 if (exists("all_positions") && nrow(all_positions) > 0) {
   
-  # Seleccionamos el primer run de cada RQ para no saturar el plano
   sample_positions <- all_positions %>%
-    group_by(rq) %>%
+    group_by(rq, mapa) %>%
     filter(sim_id == first(sim_id)) %>%
     ungroup()
 
@@ -910,19 +816,15 @@ if (exists("all_positions") && nrow(all_positions) > 0) {
     geom_path(linewidth = 0.7, alpha = 0.8) +
     geom_point(data = starts, aes(x = x, y = y), shape = 16, size = 1.8) +
     geom_point(data = ends, aes(x = x, y = y), shape = 17, size = 2.5) +
-    facet_wrap(~ rq) +
-    labs(
-      title = NULL,
-      x = "Coordenada X (m)",
-      y = "Coordenada Y (m)"
-    ) +
-    theme_bw(base_size = 10) +
+    facet_grid(rq ~ mapa, scales = "free") +
+    labs(x = "Coordenada X (m)", y = "Coordenada Y (m)") +
+    theme_bw(base_size = 9) +
     theme(
       legend.position = "none",
       strip.background = element_rect(fill = "#f0f0f0"),
-      strip.text = element_text(face = "bold")
-    ) +
-    coord_fixed()
+      strip.text = element_text(face = "bold"),
+      aspect.ratio = 1
+    )
 }
 ```
 
@@ -958,36 +860,12 @@ if (exists("all_positions") && nrow(all_positions) > 0) {
 }
 ```
 
-```{r speed-profile, echo=FALSE, fig.cap="Evolución de la velocidad instantánea del flujo peatonal.", out.width="90%", fig.height=4, fig.align="center"}
-if (exists("all_positions") && nrow(all_positions) > 0) {
-  
-  speed_df <- all_positions %>%
-    group_by(id) %>%
-    arrange(time) %>%
-    mutate(
-      dx = x - lag(x),
-      dy = y - lag(y),
-      dt = time - lag(time),
-      speed = sqrt(dx^2 + dy^2) / dt
-    ) %>%
-    filter(!is.na(speed))
-
-  ggplot(speed_df, aes(x = time, y = speed, color = rq)) +
-    geom_smooth(method = "loess", se = TRUE, alpha = 0.2, linewidth = 1.1) +
-    labs(
-      title = NULL,
-      x = "Tiempo de Simulación (s)",
-      y = "Velocidad Instantánea Promedio (m/s)",
-      color = "Escenario"
-    ) +
-    theme_bw(base_size = 10) +
-    theme(legend.position = "bottom")
-}
-```
-
 ```{r operational-metrics-table, echo=FALSE}
 library(knitr)
 library(kableExtra)
+library(jsonlite)
+library(dplyr)
+library(purrr)
 
 results_files <- list.files("data/results", pattern = "^result_.*\\.json$", full.names = TRUE)
 
@@ -997,42 +875,62 @@ if (length(results_files) > 0) {
     j <- tryCatch(fromJSON(f), error = function(e) NULL)
     if (is.null(j)) return(NULL)
     
-    # 🎯 CORREGIDO: ignore.case en lugar de ignore_case
-    rq_label <- "RQ1 (Signals)"
-    if (grepl("rq2", f, ignore.case = TRUE)) rq_label <- "RQ2 (Attacker)"
-    if (grepl("rq3", f, ignore.case = TRUE)) rq_label <- "RQ3 (Police)"
+    fname   <- basename(f)
+    exp_num <- ifelse(!is.null(j$experiment), as.numeric(j$experiment), 1)
+    
+    mapa_val <- case_when(
+      grepl("office", fname, ignore.case = TRUE) ~ "Oficina",
+      grepl("supermarket", fname, ignore.case = TRUE) ~ "Supermercado",
+      grepl("diaphanous", fname, ignore.case = TRUE) ~ "Diáfano",
+      TRUE ~ "General"
+    )
+    rq_val <- case_when(
+      grepl("rq1", fname, ignore.case = TRUE) ~ "RQ1 (Señales)",
+      grepl("rq2", fname, ignore.case = TRUE) ~ "RQ2 (Atacante)",
+      grepl("rq3", fname, ignore.case = TRUE) ~ "RQ3 (Policías)",
+      TRUE ~ "General"
+    )
+    
+    is_c2 <- grepl("_c2", fname, ignore.case = TRUE) || exp_num == 2 || exp_num == 101
+    is_c3 <- (exp_num == 3 || (exp_num == 2 && !is_c2)) && !grepl("_c2", fname, ignore.case = TRUE)
+    
+    config_label <- case_when(
+      is_c2 ~ "C2 (Visión Local - Sin Señales)",
+      is_c3 ~ "C3 (Visión Local - Con Señales)",
+      TRUE  ~ "C1 (Visión Global)"
+    )
     
     data.frame(
-      RQ = rq_label,
+      Mapa = mapa_val,
+      RQ = rq_val,
+      Configuracion = config_label,
       Evacuados = ifelse(!is.null(j$civilian_evacuated), j$civilian_evacuated, NA),
       Fallecidos = ifelse(!is.null(j$civilian_killed), j$civilian_killed, 0),
       Atrapados = ifelse(!is.null(j$civilian_trapped), j$civilian_trapped, 0),
       Tiempo_Medio = ifelse(!is.null(j$mean_time), j$mean_time, NA),
-      Pasos_Medios = ifelse(!is.null(j$mean_steps), j$mean_steps, NA),
       stringsAsFactors = FALSE
     )
   }) %>% compact() %>% bind_rows()
 
   summary_table <- res_list %>%
-    group_by(RQ) %>%
+    group_by(Mapa, RQ, Configuracion) %>%
     summarise(
-      `Evacuados (Media)` = sprintf("%.2f", mean(Evacuados, na.rm = TRUE)),
-      `Fallecidos (Media)` = sprintf("%.2f", mean(Fallecidos, na.rm = TRUE)),
-      `Atrapados (Media)`  = sprintf("%.2f", mean(Atrapados, na.rm = TRUE)),
-      `Tiempo Medio (s)`  = sprintf("%.2f s", mean(Tiempo_Medio, na.rm = TRUE)),
-      `Pasos Medios`       = sprintf("%.2f", mean(Pasos_Medios, na.rm = TRUE))
-    )
+      `Evacuados (Media)`  = sprintf("%.1f", mean(Evacuados, na.rm = TRUE)),
+      `Fallecidos (Media)` = sprintf("%.1f", mean(Fallecidos, na.rm = TRUE)),
+      `Atrapados (Media)`  = sprintf("%.1f", mean(Atrapados, na.rm = TRUE)),
+      `Tiempo Medio (s)`   = sprintf("%.2f s", mean(Tiempo_Medio, na.rm = TRUE)),
+      .groups = "drop"
+    ) %>%
+    arrange(Mapa, RQ, Configuracion)
 
   kbl(
     summary_table,
     format = "latex",
     booktabs = TRUE,
     centering = TRUE,
-    caption = "Métricas operativas de evacuación y supervivencia registradas en las simulaciones de test."
+    caption = "Métricas operativas de evacuación comparando C1, C2 y C3 por entorno."
   ) %>%
-    kable_styling(
-      latex_options = c("HOLD_position", "scale_down"),
-      font_size = 9
-    )
+    kable_styling(latex_options = c("HOLD_position", "scale_down"), font_size = 9) %>%
+    collapse_rows(columns = 1:2, latex_hline = "major")
 }
 ```

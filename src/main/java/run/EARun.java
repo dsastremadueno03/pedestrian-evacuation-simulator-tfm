@@ -40,7 +40,7 @@ import pedestrian.PopulationConfig;
 import signs.EphimeralVisualSign;
 import signs.EvacuationPlanSign;
 
-public class ExperimentTester {
+public class EARun {
 
 	public static void main(String[] args) {
 		

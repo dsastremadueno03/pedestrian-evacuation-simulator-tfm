@@ -48,7 +48,7 @@ import pedestrian.PedestrianWithVisionParameters;
 import pedestrian.Police;
 import pedestrian.PopulationConfig;
 import pedestrian.PopulationGenerator;
-import run.ExperimentTester;
+import run.EARun;
 import run.ExtraJsonParameterLoader;
 import signs.EphimeralVisualSign;
 import signs.EvacuationPlanSign;
@@ -829,4 +829,12 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		  SimulationMetrics metrics = getMetrics(automaton, crowd);
 		  return new SimulationResult(automaton, crowd, metrics);
 	  }
+	  
+	  /**
+	   * Number of genes in an individual
+	   * @return Number of genes
+	   */
+	  public int getTotalGenes() {
+		    return this.nExits + (this.nTempSigns * 2) + (this.nPermSigns * 2) + (this.nPolice * 2);
+		}
 }
