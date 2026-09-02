@@ -5,7 +5,9 @@ import static es.uma.lcc.caesium.statistics.Random.random;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
 import java.util.Objects;
 
 import com.github.cliftonlabs.json_simple.JsonArray;
@@ -14,6 +16,8 @@ import com.github.cliftonlabs.json_simple.Jsoner;
 
 import ea.DFOEvaluator;
 import ea.EAEvaluator;
+import ea.EAEvaluator.DecodedDesign;
+import ea.EAEvaluator.SimulationResult;
 import es.uma.lcc.caesium.dfopt.base.DerivativeFreeConfiguration;
 import es.uma.lcc.caesium.dfopt.base.DerivativeFreeMethod;
 import es.uma.lcc.caesium.dfopt.base.IteratedDerivativeFreeMethod;
@@ -21,19 +25,26 @@ import es.uma.lcc.caesium.dfopt.hookejeeves.HookeJeeves;
 import es.uma.lcc.caesium.dfopt.hookejeeves.HookeJeevesConfiguration;
 import es.uma.lcc.caesium.dfopt.neldermead.NelderMead;
 import es.uma.lcc.caesium.dfopt.neldermead.NelderMeadConfiguration;
-import es.uma.lcc.caesium.ea.base.Individual;
 import es.uma.lcc.caesium.ea.util.JsonUtil;
 import es.uma.lcc.caesium.pedestrian.evacuation.optimization.ExitEvacuationProblem;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.SpecificCellularAutomaton;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.automata.pedestrian.Pedestrian;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.configuration.SimulationConfiguration;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Access;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Domain;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.environment.Environment;
 import es.uma.lcc.caesium.statistics.Descriptive;
 import es.uma.lcc.caesium.statistics.Random;
+import pedestrian.Attacker;
+import pedestrian.Civilian;
+import pedestrian.Police;
 import pedestrian.PopulationConfig;
+import signs.EphimeralVisualSign;
+import signs.EvacuationPlanSign;
 
 public class DFORun {
 
-	public static void main(String[] args) {
+public static void main(String[] args) {
 		
 		if(args.length < 3) {
 			System.out.println("STRUCTURE: <experiment_configuration> <dfo_configuration> <run_id>");
@@ -53,6 +64,8 @@ public class DFORun {
 		String algoName = new File(pathDFO).getName().replace(".json", "").toLowerCase();
 		String prefix = exp.getName().replace(".json", "");
 		String resultsCSV = "data/results/results_" + algoName + "_" + prefix + "_run_" + idRun + ".csv";
+		
+		System.out.println("Running DFO (" + algoName + ") on " + prefix + " [Run " + idRun + "]");
 			
 		try(PrintWriter w = new PrintWriter(new FileWriter(resultsCSV))){
 			
@@ -122,18 +135,15 @@ public class DFORun {
 			    	System.err.println("ERROR: Could not export JSON statistics!");
 			    }
 			    
-			    var bestPoint = dfoRunner.getStatistics().getBest(0).point();
-			    Individual bestInRun = new Individual();
-			    for (int i = 0; i < bestPoint.size(); i++) {
-			        bestInRun.getGenome().setGene(i, bestPoint.get(i));
-			    }
+			    List<Double> bestPoint = dfoRunner.getStatistics().getBest(0).point();
+			    DecodedDesign bestDesign = evaluator.decode(bestPoint);
 			    
 			    double[] fitnesses = new double[testSims];
 			    
 			    for(int s = 0; s < testSims; s++) {
-			    	long simSeed = Objects.hash(thisSeed, bestInRun.hashCode(), s + 100000);
+			    	long simSeed = Objects.hash(thisSeed, bestPoint.hashCode(), s + 100000);
 			    	Random.random.setSeed(simSeed);
-			    	EAEvaluator.SimulationResult result = evaluator.getSimulation(bestInRun);
+			    	EAEvaluator.SimulationResult result = evaluator.getSimulation(bestDesign);
 			    	fitnesses[s] = evaluator.getFitness(result.metrics());
 			    }
 			    
@@ -170,13 +180,14 @@ public class DFORun {
 			    	}
 			    }
 			    
-			    long repSeed = Objects.hash(thisSeed, bestInRun.hashCode(), repIndex + 100000);
+			    long repSeed = Objects.hash(thisSeed, bestPoint.hashCode(), repIndex + 100000);
 			    Random.random.setSeed(repSeed);
-			    EAEvaluator.SimulationResult repInfo = evaluator.getSimulation(bestInRun);
+			    EAEvaluator.SimulationResult repInfo = evaluator.getSimulation(bestDesign);
 
 				EARun.saveNewMetricsJSON(algoName + "_" + prefix, idExperiment, idRun, avgFitness, repInfo);
 				EARun.saveRunCSV(w, idExperiment, idRun, avgFitness, repInfo);
-				EARun.saveData(w, idExperiment, avgFitness, repInfo, bestInRun, evaluator, algoName + "_" + prefix + "_run_" + idRun);
+				
+			    saveDFOData(idExperiment, avgFitness, repInfo, bestDesign, evaluator, algoName + "_" + prefix + "_run_" + idRun);
 			}
 			
 			w.flush();
@@ -186,5 +197,104 @@ public class DFORun {
 		}
 				
 		System.out.println("--- DFO RUN " + idRun + " FINISHED ---");
+	}
+
+	public static void saveDFOData(int idExperiment, double fitness, SimulationResult info, DecodedDesign bestDesign, EAEvaluator evaluator, String prefix) {
+		SpecificCellularAutomaton automaton = info.automaton();
+		List<Pedestrian> crowd = info.crowd();
+
+		var trace = automaton.getTrace();
+		String fileName = "data/traces/trace_" + prefix + "_experiment_" + idExperiment + ".json";
+		
+		File file = new File(fileName);
+		if (file.getParentFile() != null) {
+			file.getParentFile().mkdirs();
+		}
+		
+		try (FileWriter fileWriter = new FileWriter(fileName)) {
+		  fileWriter.write(Jsoner.prettyPrint(trace.toJson().toJson()));
+		  fileWriter.flush();
+		} catch (IOException e) {
+		  e.printStackTrace();
+		}
+		
+		JsonObject rolesJson = new JsonObject();
+		for (Pedestrian p : crowd) {
+		    String rol = "Unknown";
+		    if (p instanceof Civilian) {
+		        rol = "Civilian";
+		    } else if (p instanceof Attacker) {
+		        rol = "Attacker";
+		    } else if (p instanceof Police) {
+		        rol = "Police";
+		    }
+		    rolesJson.put(String.valueOf(p.getIdentifier()), rol); 
+		}
+
+		String rolesFileName = "data/traces/roles_" + prefix + "_experiment_" + idExperiment + ".json";
+		try (FileWriter rolesWriter = new FileWriter(rolesFileName)) {
+		    rolesWriter.write(Jsoner.prettyPrint(rolesJson.toJson()));
+		    rolesWriter.flush();
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+		
+		if(bestDesign != null && evaluator != null) {
+			JsonObject coorJson = new JsonObject();
+			coorJson.put("experiment_id", idExperiment);
+			coorJson.put("fitness", fitness);
+			coorJson.put("total_penalty", bestDesign.repairPenalty());
+			
+			JsonArray exitsArray = new JsonArray();
+			for(Access exit : bestDesign.trialExits()) {
+				var bounds = exit.getShape().getAWTShape().getBounds2D();
+				JsonObject coor = new JsonObject();
+				coor.put("X", bounds.getCenterX());
+				coor.put("Y", bounds.getCenterY());
+				exitsArray.add(coor);
+			}
+			coorJson.put("exits", exitsArray);
+			
+			JsonArray tempSignalArray = new JsonArray();
+			for(EphimeralVisualSign s : bestDesign.trialTempVisSigns()) {
+				JsonObject coor = new JsonObject();
+				double x = (s.getLocation().column() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				double y = (s.getLocation().row() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				coor.put("X", x);
+				coor.put("Y", y);
+				tempSignalArray.add(coor);
+			}
+			coorJson.put("temporal_signals", tempSignalArray);
+			
+			JsonArray permSignalArray = new JsonArray();
+			for(EvacuationPlanSign s : bestDesign.trialPermVisSigns()) {
+				JsonObject coor = new JsonObject();
+				double x = (s.getLocation().column() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				double y = (s.getLocation().row() * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				coor.put("X", x);
+				coor.put("Y", y);
+				permSignalArray.add(coor);
+			}
+			coorJson.put("permanent_signals", permSignalArray);
+			
+			JsonArray policeArray = new JsonArray();
+			for(int[] p : bestDesign.trialPolice()) {
+				JsonObject coor = new JsonObject();
+				double x = (p[1] * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				double y = (p[0] * evaluator.getCellDimension()) + (evaluator.getCellDimension() / 2.0);
+				coor.put("X", x);
+				coor.put("Y", y);
+				policeArray.add(coor);
+			}
+			coorJson.put("police", policeArray);
+		
+			String coorFileName = "data/traces/coordinates_" + prefix + "_experiment_" + idExperiment + ".json";
+			try (FileWriter coorWriter = new FileWriter(coorFileName)) {
+				coorWriter.write(Jsoner.prettyPrint(coorJson.toJson()));
+				coorWriter.flush();
+			} catch (IOException e) {
+			    e.printStackTrace();
+			}
+		}
 	}
 }

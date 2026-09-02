@@ -1,5 +1,5 @@
 {
-  "map": "data/environments/environment-example-supermarket.json",
+  "map": "data/environments/office-10.json",
   "testSimulations": 1000,
   "experiments": [
 	{

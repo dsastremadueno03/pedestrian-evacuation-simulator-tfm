@@ -462,6 +462,64 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	}
 	
 	/**
+	 * Decodes an individual from its genome as a double array and applies lamarckian evolution if necessary
+	 * @param genes List of gene values
+	 * @return record of lists containing exits, signs and police coordinates
+	 */
+	public DecodedDesign decode(List<Double> genes) {
+		int gene = 0;
+		
+		// Exits
+		List<Access> trialExits = new ArrayList<>();
+		int exitID = 0;
+		for(int j = 0; j < nExits; j++) {
+			double geneInfo = genes.get(gene++);
+			double location = Math.round(geneInfo * eep.getPerimeterLength() * 10) / 10.0;
+			double repairedLocation = repairExit(location);
+			trialExits.addAll(decoder.decodeAccess(repairedLocation, j, exitID));
+			exitID = trialExits.size();
+		}
+		
+		// Ephimeral Visual Signs
+		List<EphimeralVisualSign> trialTempVisSigns = new ArrayList<>();
+		for(int j = 0; j < nTempSigns; j++) {
+			double geneRow = genes.get(gene++);
+			double geneCol = genes.get(gene++);
+			
+			int row = (int) (geneRow * (mapHeight - 1));
+			int col = (int) (geneCol * (mapWidth - 1));
+			int[] repairedCoordinates = repair(row, col);
+			trialTempVisSigns.add(new EphimeralVisualSign(repairedCoordinates[0], repairedCoordinates[1]));
+		}
+		
+		// Permanent Visual Signs
+		List<EvacuationPlanSign> trialPermVisSigns = new ArrayList<>();
+		for(int j = 0; j < nPermSigns; j++) {
+			double geneRow = genes.get(gene++);
+			double geneCol = genes.get(gene++);
+			
+			int row = (int) (geneRow * (mapHeight - 1));
+			int col = (int) (geneCol * (mapWidth - 1));
+			int[] repairedCoordinates = repair(row, col);
+			trialPermVisSigns.add(new EvacuationPlanSign(repairedCoordinates[0], repairedCoordinates[1]));
+		}
+		
+		// Police
+		List<int[]> trialPolice = new ArrayList<>();
+		for(int j = 0; j < nPolice; j++) {
+			double geneRow = genes.get(gene++);
+			double geneCol = genes.get(gene++);
+			
+			int row = (int) (geneRow * (mapHeight - 1));
+			int col = (int) (geneCol * (mapWidth - 1));
+			int[] repairedCoordinates = repair(row, col);
+			trialPolice.add(repairedCoordinates);
+		}
+		
+		return new DecodedDesign(trialExits, trialTempVisSigns, trialPermVisSigns, trialPolice, 0);
+	}
+	
+	/**
 	 * Generates automaton with its scenario, placing exits and signs. 
 	 * @param dd record of lists that stores coordinates 
 	 * @return automaton set 
@@ -584,7 +642,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 	    try {
 	        if (civEvacuated >= 2) {
 	            statistics = automaton.computeStatistics();
-	            System.out.println(statistics);
+	            //System.out.println(statistics);
 	            meanEvacuationTime = statistics.meanEvacuationTime();
 	            medianEvacuationTime = statistics.medianEvacuationTime();
 	            meanSteps = statistics.meanSteps();

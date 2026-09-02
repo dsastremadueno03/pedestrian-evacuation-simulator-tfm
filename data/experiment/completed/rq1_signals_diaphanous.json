@@ -1,5 +1,5 @@
 {
-  "map": "data/environments/environment-example-supermarket.json",
+  "map": "data/environments/environment-example.json",
   "testSimulations": 1000,
   "experiments": [
 	{
@@ -13,11 +13,11 @@
 	      },
 	      "crowd": {
 	        "pedestrianReferenceVelocity": 1.3,
-	        "numPedestrians": [100.0, 100.0],
+	        "numPedestrians": [75.0, 75.0],
 	        "attractionBias": [0.8, 1.2], "crowdRepulsion": [0, 0.1], "velocityFactor": [0.8, 1.2]
 	      },
 	      "population": {
-	        "numCivilians": 100, "numAttackers": 0, "numPolice": 0,
+	        "numCivilians": 75, "numAttackers": 0, "numPolice": 0,
 	        "pChild": 0.1, "pAdult": 0.8, "pElder": 0.1
 	      },
 	      "environment": {
@@ -48,11 +48,11 @@
       },
       "crowd": {
         "pedestrianReferenceVelocity": 1.3,
-        "numPedestrians": [100.0, 100.0],
+        "numPedestrians": [75.0, 75.0],
         "attractionBias": [0.8, 1.2], "crowdRepulsion": [0, 0.1], "velocityFactor": [0.8, 1.2]
       },
       "population": {
-        "numCivilians": 100, "numAttackers": 0, "numPolice": 0,
+        "numCivilians": 75, "numAttackers": 0, "numPolice": 0,
         "pChild": 0.1, "pAdult": 0.8, "pElder": 0.1
       },
       "environment": {
