@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# ***Se ha generado este script empleando inteligencia artificial generativa.
+
 # Configuración de carpetas y parámetros masivos
 PENDING_DIR="data/experiment/pending"
 COMPLETED_DIR="data/experiment/completed"
