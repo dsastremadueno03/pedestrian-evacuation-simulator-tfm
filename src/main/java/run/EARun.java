@@ -319,29 +319,21 @@ public class EARun {
 		w.flush();
 	}
 
+	/**
+	 * Saves data of a solution
+	 * @param w Writing configuration
+	 * @param idExperiment Experiment run
+	 * @param fitness Fitness obtained
+	 * @param info Simulation information kept
+	 * @param ind Specific individual to be saved
+	 * @param evaluator Used evaluator
+	 * @param prefix Configuration name used
+	 */
 	public static void saveData(PrintWriter w, int idExperiment, double fitness, EAEvaluator.SimulationResult info, Individual ind, EAEvaluator evaluator, String prefix) {
 		SpecificCellularAutomaton automaton = info.automaton();
 		EAEvaluator.SimulationMetrics m = info.metrics();
 		List<Pedestrian> crowd = info.crowd();
 		
-		/*
-		// Write statistics to csv file
-		w.println(idExperiment + "," +
-				"BEST," +
-				fitness + "," +
-				m.civEvacuated() + "," +
-				m.civDead() + "," +
-				m.civTrapped() + "," +
-				m.attAlive() + "," +
-				m.polAlive() + "," +
-				m.meanEvacuationTime() + "," +
-				m.medianEvacuationTime() + "," +
-				m.meanSteps() + "," +
-				m.medianSteps() + "," +
-				m.avgDistToExit() + "," +
-				m.avgDistToAtt() + "," +
-				m.avgDistToPol());
-		*/
 		w.println("---------------------------------------------------------------------------");
 		w.flush();
 		

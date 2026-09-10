@@ -79,6 +79,11 @@ public class PopulationGenerator {
 			return pedestrians;
 		}
 		
+		/**
+		 * Determines age of civilian to be placed.
+		 * @param config Population configuration used for pedestrians
+		 * @return Age type for civilian
+		 */
 		private Age determineAge(PopulationConfig config) {
 			double rand = random.nextDouble();
 			if(rand < config.probChild())
@@ -88,6 +93,10 @@ public class PopulationGenerator {
 			else return Age.ELDERLY;
 		}
 		
+		/**
+		 * Gets valid location by getting empty one.
+		 * @return Returns empty valid location
+		 */
 		private Location getRandomEmptyLocation() {
 			int row;
 			int col;

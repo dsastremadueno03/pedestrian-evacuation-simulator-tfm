@@ -30,6 +30,10 @@ public class Police extends PedestrianWithVision {
 		this.column = col;
 	}
 	
+	/**
+	 * Attacks to closest possible attacker in range.
+	 * @return Success of attack
+	 */
 	public boolean attack() {
 		SpecificCellularAutomaton myAutomaton = (SpecificCellularAutomaton) this.automaton;
 		

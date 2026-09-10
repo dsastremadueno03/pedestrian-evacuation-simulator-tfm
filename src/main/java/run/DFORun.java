@@ -199,6 +199,15 @@ public static void main(String[] args) {
 		System.out.println("--- DFO RUN " + idRun + " FINISHED ---");
 	}
 
+	/**
+	 * Saves DFO run data
+	 * @param idExperiment Experiment run
+	 * @param fitness data Fitness obtained
+	 * @param info Simulation information
+	 * @param bestDesign Data regarding best placement of elements
+	 * @param evaluator Used evaluator
+	 * @param prefix Name of configuration
+	 */
 	public static void saveDFOData(int idExperiment, double fitness, SimulationResult info, DecodedDesign bestDesign, EAEvaluator evaluator, String prefix) {
 		SpecificCellularAutomaton automaton = info.automaton();
 		List<Pedestrian> crowd = info.crowd();

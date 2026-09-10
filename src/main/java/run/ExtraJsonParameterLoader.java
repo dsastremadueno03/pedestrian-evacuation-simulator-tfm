@@ -49,7 +49,7 @@ public class ExtraJsonParameterLoader {
 	}
 	
 	/**
-	 * Organizes read data in a social weight matrix
+	 * Organizes read data in a social weight matrix.
 	 * @param matrix data from JSON
 	 * @return matrix with social weights
 	 */
@@ -74,6 +74,11 @@ public class ExtraJsonParameterLoader {
 		return M;
 	}
 	
+	/**
+	 * Converts the read data to the population configuration data structure.
+	 * @param population Data regarding population configuration as JsonObject
+	 * @return Population configuration loaded
+	 */
 	public static PopulationConfig loadPopulationConfig(JsonObject population) {
 		if(population == null) {
 			System.err.println("Error en el JsonArray!");
