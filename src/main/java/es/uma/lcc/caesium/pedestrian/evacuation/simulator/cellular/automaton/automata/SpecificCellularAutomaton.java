@@ -9,10 +9,10 @@ import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.aut
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.geometry._2d.Location;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Canvas;
 import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.gui.Frame;
-import pedestrian.MultiPedestrianFactory;
-import signs.EphimeralVisualSign;
-import signs.EvacuationPlanSign;
-import signs.Sign;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.pedestrian.MultiPedestrianFactory;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.signs.EphimeralVisualSign;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.signs.EvacuationPlanSign;
+import es.uma.lcc.caesium.pedestrian.evacuation.simulator.cellular.automaton.signs.Sign;
 
 public class SpecificCellularAutomaton extends CellularAutomaton {
 	
