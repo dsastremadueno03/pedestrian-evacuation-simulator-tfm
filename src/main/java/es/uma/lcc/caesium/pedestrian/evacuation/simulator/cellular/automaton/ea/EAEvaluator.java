@@ -804,7 +804,7 @@ public class EAEvaluator extends ContinuousObjectiveFunction{
 		DecodedDesign dd = decode(i);
 		for(int s = 0; s < numSimulations; s++) {
 			// Generates unique seed
-			Random.random.setSeed(Objects.hash(seed, i.hashCode(), s));
+			Random.random.setSeed(Objects.hash(seed, s));
 			// Simulates specific simulation
 			SimulationResult result = getSimulation(dd);
 			fitnesses[s] = getFitness(result.metrics());
