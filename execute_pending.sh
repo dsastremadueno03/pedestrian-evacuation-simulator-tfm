@@ -5,8 +5,17 @@
 # Configuración de carpetas y parámetros masivos
 PENDING_DIR="data/experiment/pending"
 COMPLETED_DIR="data/experiment/completed"
+
+# EA
+########################################################
 JSON_EVO="data/config/numeric.json" 
+########################################################
+
+# DFO
+########################################################
 #JSON_EVO="data/config/neldermead.json" 
+########################################################
+
 NUM_RUNS=30
 ALGO_NAME=$(basename "$JSON_EVO" .json | tr '[:upper:]' '[:lower:]')
 
@@ -38,8 +47,16 @@ do
     for ((i=0; i<NUM_RUNS; i++))
     do
         # Inyectamos las variables al main
+        # EA
+        ########################################################
 		java -jar tfm.jar "$EXP_FILE" "$JSON_EVO" "$i" &
+		########################################################
+		
+		# DFO
+		########################################################
 		#java -cp tfmDFO.jar run.DFORun "$EXP_FILE" "$JSON_EVO" "$i" &
+		########################################################
+		
     done
 
     echo "Esperando a que finalicen los procesos de $PREFIX..."
@@ -47,10 +64,16 @@ do
     echo "Runs completados para $PREFIX."
 
     # FASE DE UNIFICACIÓN: Consolidar los 30 CSVs temporales
+    # EA
+    ########################################################
     OUTPUT_MAESTRO="data/results/results_${PREFIX}.csv"
     TEMP_PREFIX="data/results/results_${PREFIX}_run_"
+    ########################################################
+    # DFO
+    ########################################################
     #TEMP_PREFIX="data/results/results_${ALGO_NAME}_${PREFIX}_run_"
 	#OUTPUT_MAESTRO="data/results/results_${ALGO_NAME}_${PREFIX}.csv"
+	########################################################
 
     echo "Unificando archivos en el maestro: $OUTPUT_MAESTRO"
 

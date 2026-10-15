@@ -4,9 +4,9 @@
     "islands" : [
         {
             "numislands" : 1,
-            "popsize" : 100,
-            "offspring" : 50,
-            "maxevals" : 5000,
+            "popsize" : 20,
+            "offspring" : 10,
+            "maxevals" : 100,
             "initialization" : {
                 "name": "randomvector"
             },

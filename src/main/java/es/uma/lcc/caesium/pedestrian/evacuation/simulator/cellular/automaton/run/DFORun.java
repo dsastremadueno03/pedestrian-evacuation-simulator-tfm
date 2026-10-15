@@ -141,7 +141,7 @@ public static void main(String[] args) {
 			    double[] fitnesses = new double[testSims];
 			    
 			    for(int s = 0; s < testSims; s++) {
-			    	long simSeed = Objects.hash(thisSeed, bestPoint.hashCode(), s + 100000);
+			    	long simSeed = Objects.hash(thisSeed, s);
 			    	Random.random.setSeed(simSeed);
 			    	EAEvaluator.SimulationResult result = evaluator.getSimulation(bestDesign);
 			    	fitnesses[s] = evaluator.getFitness(result.metrics());
@@ -180,7 +180,7 @@ public static void main(String[] args) {
 			    	}
 			    }
 			    
-			    long repSeed = Objects.hash(thisSeed, bestPoint.hashCode(), repIndex + 100000);
+			    long repSeed = Objects.hash(thisSeed, repIndex);
 			    Random.random.setSeed(repSeed);
 			    EAEvaluator.SimulationResult repInfo = evaluator.getSimulation(bestDesign);
 

@@ -136,7 +136,7 @@ public class EARun {
 			    // Execute 1000 simulations from best individual as testing
 			    for(int s = 0; s < testSims; s++) {
 			    	// Seed with offset (100000) for testing new configurations
-			    	long simSeed = Objects.hash(thisSeed, bestInRun.hashCode(), s + 100000);
+			    	long simSeed = Objects.hash(thisSeed, s);
 			    	Random.random.setSeed(simSeed);
 			    	EAEvaluator.SimulationResult result = evaluator.getSimulation(bestInRun);
 			    	fitnesses[s] = evaluator.getFitness(result.metrics());
@@ -183,7 +183,7 @@ public class EARun {
 			    }
 			    
 			    // Now we get the information from median simulation and store it
-			    long repSeed = Objects.hash(thisSeed, bestInRun.hashCode(), repIndex + 100000);
+			    long repSeed = Objects.hash(thisSeed, repIndex);
 			    Random.random.setSeed(repSeed);
 			    EAEvaluator.SimulationResult repInfo = evaluator.getSimulation(bestInRun);
 
@@ -209,7 +209,7 @@ public class EARun {
 
 			    	// Test simulations with same seed as previous experiment
 			    	for(int s = 0; s < testSims; s++) {
-			    		long simSeed = Objects.hash(thisSeed, bestInRun.hashCode(), s + 100000);
+			    		long simSeed = Objects.hash(thisSeed, s);
 			    		Random.random.setSeed(simSeed);
 			    		EAEvaluator.SimulationResult resultC2 = evaluatorC2.getSimulation(bestInRun);
 			    		fitnessesC2[s] = evaluatorC2.getFitness(resultC2.metrics());
@@ -229,7 +229,7 @@ public class EARun {
 			    		}
 			    	}
 
-			    	long repSeedC2 = Objects.hash(thisSeed, bestInRun.hashCode(), repIndexC2 + 100000);
+			    	long repSeedC2 = Objects.hash(thisSeed, repIndexC2);
 			    	Random.random.setSeed(repSeedC2);
 			    	EAEvaluator.SimulationResult repInfoC2 = evaluatorC2.getSimulation(bestInRun);
 
